@@ -7,6 +7,7 @@
 <script>
 const paper = require("paper");
 import grahamScan from "../algorithm/GrahamScan";
+import algoTools from "../algorithm/AlgoTools";
 
 export default {
   name: "PaperCanvas",
@@ -34,6 +35,12 @@ export default {
       this.initType1();
     } else if (this.type === 2) {
       this.initType2();
+    } else if (this.type === 3) {
+      this.initType3();
+    } else if (this.type === 4) {
+      this.initType4();
+    } else if (this.type === 5) {
+      this.initType5();
     } else {
       alert("E-Doz");
     }
@@ -75,10 +82,6 @@ export default {
       }
       path.selected = true;
       path.closed = true;
-      // for (let i = 0; i < pointList.length - 1; i++) {
-      //     drawLine(pointList[i], pointList[i + 1], c);
-      // }
-      // drawLine(pointList[pointList.length - 1], pointList[0], c);
     },
     reset() {
       let temp = this.paths.pop();
@@ -101,7 +104,7 @@ export default {
       // let minIndex = -1;
       for (let i = 0; i < points.length; i++) {
         let tempPoint = points[i];
-        let tempDis = this.getDistance(clickPoint, tempPoint);
+        let tempDis = algoTools.getDistance(clickPoint, tempPoint);
         if (tempDis < minDis) {
           minDis = tempDis;
           minPoint = tempPoint;
@@ -113,8 +116,17 @@ export default {
       }
       return null;
     },
-    getDistance(p1, p2) {
-      return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    getNextPointPosOnConvexHull(point, convexHull) {
+      for (let i = 0; i < convexHull.length; i++) {
+        if (point.x === convexHull[i].x && point.y === convexHull[i].y) {
+          i = i + 1;
+          if (i === convexHull.length) {
+            return {x: convexHull[0].x, y: convexHull[0].y};
+          } else {
+            return {x: convexHull[i].x, y: convexHull[i].y};
+          }
+        }
+      }
     },
     sendMessage(msg) {
       this.$emit("message", msg);
@@ -175,33 +187,65 @@ export default {
       let pointNum = 8;
       let angleInterval = 360 / pointNum;
       let decagon = null;
+      let clickedPoints = [];
+      let xList = [];
       // decagon.fillColor = '#e9e9ff';
       for (let i = 0; i < pointNum; i++) {
-        let x = centerX + r * Math.cos(angleInterval * i * Math.PI / 180);
-        let y = centerY + r * Math.sin(angleInterval * i * Math.PI / 180);
+        let x = Math.floor(centerX + r * Math.cos(angleInterval * i * Math.PI / 180));
+        let y = Math.floor(centerY + r * Math.sin(angleInterval * i * Math.PI / 180));
+        while (xList.includes(x)) {
+          x += 1;
+        }
+        xList.push(x);
         this.points.push({x: x, y: y});
         this.pointPathMap[x + "," + y] = this.drawPoint(this.scope, this.p2c({x: x, y: y}), 10);
       }
+      let newList = this.points.slice();
+      let convexHull = grahamScan.exec(newList);
+      algoTools.printPointList(this.points);
+      algoTools.printPointList(convexHull);
       this.tool.onMouseDown = async (event) => {
         let clickPoint = this.p2c(event.point);
         let nearestPoint = this.getNearestPoint(clickPoint, this.points);
-        if (nearestPoint) {
+        if (nearestPoint && !clickedPoints.includes(nearestPoint.x + "," + nearestPoint.y)) {
+          let nextPoint = this.getNextPointPosOnConvexHull(nearestPoint, convexHull);
+          clickedPoints.push(nearestPoint.x + "," + nearestPoint.y);
           let circle = this.pointPathMap[nearestPoint.x + "," + nearestPoint.y];
           circle.fillColor = "#ee9a33";
           if (nearestPoint.y - centerY === 0) {
-            this.drawLineSegment({x: nearestPoint.x, y: 0}, {x: nearestPoint.x, y: this.GLOBAL_CANVAS_HEIGHT});
+            this.drawLineSegment({x: nearestPoint.x, y: 0}, {
+              x: nearestPoint.x,
+              y: this.GLOBAL_CANVAS_HEIGHT
+            });
           } else {
             let x1 = 0;
             let y1 = (-1 * (x1 - nearestPoint.x) * (nearestPoint.x - centerX)) / (nearestPoint.y - centerY) + nearestPoint.y;
             let x2 = this.GLOBAL_CANVAS_WIDTH;
             let y2 = (-1 * (x2 - nearestPoint.x) * (nearestPoint.x - centerX)) / (nearestPoint.y - centerY) + nearestPoint.y;
-            this.drawLineSegment(this.p2c({x: x1, y: y1}), this.p2c({x: x2, y: y2}));
+            let slope = (y2 - y1) / (x2 - x1);
+            let lineSegment = this.drawLineSegment(this.p2c({x: x1, y: y1}), this.p2c({x: x2, y: y2}));
+            let b = nearestPoint.y - slope * nearestPoint.x;
+            while (slope === slope) {
+              slope += 0.04;
+              b = nearestPoint.y - slope * nearestPoint.x;
+              x1 = 0;
+              y1 = b;
+              x2 = this.GLOBAL_CANVAS_WIDTH;
+              y2 = x2 * slope + b;
+              let tempY = nextPoint.x * slope + b;
+              if (algoTools.orient(nearestPoint, {x: nextPoint.x, y: tempY}, nextPoint) > 0) {
+                break;
+              }
+              lineSegment.remove();
+              lineSegment = this.drawLineSegment(this.p2c({x: x1, y: y1}), this.p2c({x: x2, y: y2}));
+              await new Promise(r => setTimeout(r, 20));
+            }
           }
           this.type2Counter++;
           if (this.type2Counter === pointNum) {
             let path = new paper.Path();
             this.drawPolygon(path, this.points);
-            this.sendMessage("It seems like tangent lines could bound the convex hull.");
+            this.sendMessage("It seems like \"tangent lines\" could bound the convex hull.");
             decagon = new paper.Path.RegularPolygon(new paper.Point(centerX, centerY), 8, 200);
             decagon.style = {
               fillColor: '#e9e9ff',
@@ -209,7 +253,7 @@ export default {
             decagon.rotate(25);
             while (decagon) {
               decagon.rotate(1);
-              await new Promise(r => setTimeout(r, 16));
+              await new Promise(r => setTimeout(r, 20));
             }
           }
         }
