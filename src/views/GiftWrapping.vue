@@ -3,29 +3,35 @@
     <Nav ref="nav"/>
     <h1 class="title">{{ msg }}</h1>
     <div class="tile is-ancestor">
-      <div class="tile is-vertical is-8">
-        <article class="tile is-child box">
-          <PaperCanvas :type="3" :canvasId="'canvas-one'" ref="pc" @message="getMessage"/>
-        </article>
+      <div class="tile is-parent is-8">
+        <div class="tile is-child box">
+          <PaperCanvas :type="3" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
+                       @unlock="lock=false"/>
+        </div>
       </div>
-      <div class="tile is-parent">
-        <article class="tile is-child box">
-          <div class="block">
-            Find lowest point
+      <div class="tile is-vertical is-parent">
+        <div class="tile is-child box" style="min-height: 600px; height: 600px;">
+          <div style="margin-top: 150px">
+            <div v-for="(item) in text" :key="item.message">
+              <div v-if="item.highLight">
+                <div class="block has-background-primary has-text-white">
+                  {{ item.msg }}
+                </div>
+              </div>
+              <div v-else>
+                <div class="block mb-3">
+                  {{ item.msg }}
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="block">
-            Draw a horizontal line cross the lowest point
-          </div>
-          <div class="block">
-            Find lowest point
-          </div>
-          <div class="block">
-            Find lowest point
-          </div>
-        </article>
+        </div>
+        <div class="tile is-child">
+          <button class="button" @click.left="last" :disabled="lock"><strong> Last </strong></button>
+          <button class="button" @click.left="next" :disabled="lock"><strong> Next </strong></button>
+        </div>
       </div>
     </div>
-
 
     <div v-if="preface">
       <div class="modal is-active">
@@ -33,7 +39,7 @@
         <div class="modal-card" style="max-width: 500px">
           <header class="modal-card-head">
             <p class="modal-card-title">Remember</p>
-            <button class="delete" aria-label="close" @click.left="preface=false"></button>
+            <button class="delete" aria-label="close" @click.left="closePreface"></button>
           </header>
           <section class="modal-card-body">
             <p class="content">Remember in first section, we observe some points will definitely on the convex hull
@@ -61,6 +67,30 @@ export default {
     return {
       msg: "Let's pick the bottom point. Drawing a horizontal line. The horizontal line should not pass the convex hull because all other points are above it.",
       preface: true,
+      lock: false,
+      currentIndex: 0,
+      text: [
+        {
+          msg: "Find lowest point",
+          highLight: true,
+        },
+        {
+          msg: "Draw a horizontal line cross the lowest point",
+          highLight: false,
+        },
+        {
+          msg: "Rotating the horizontal line in CCW direction and stopping when it intersects with another point",
+          highLight: false,
+        },
+        {
+          msg: "Repeatedly find bounding lines",
+          highLight: false,
+        },
+        {
+          msg: "Clean up",
+          highLight: false,
+        }
+      ],
     }
   },
   mounted() {
@@ -69,6 +99,36 @@ export default {
   methods: {
     getMessage(msg) {
       this.msg = msg;
+    },
+    async next() {
+      if (!this.lock && this.currentIndex < this.text.length - 1) {
+        this.currentIndex += 1;
+        for (let i = 0; i < this.text.length; i++) {
+          if (i === this.currentIndex) {
+            this.text[i].highLight = true;
+          } else {
+            this.text[i].highLight = false;
+          }
+        }
+        await this.$refs.pc.show(this.currentIndex);
+      }
+    },
+    async last() {
+      if (!this.lock && this.currentIndex > 0) {
+        this.currentIndex -= 1;
+        for (let i = 0; i < this.text.length; i++) {
+          if (i === this.currentIndex) {
+            this.text[i].highLight = true;
+          } else {
+            this.text[i].highLight = false;
+          }
+        }
+        await this.$refs.pc.show(this.currentIndex);
+      }
+    },
+    async closePreface() {
+      this.preface = false;
+      await this.$refs.pc.show(this.currentIndex);
     },
   },
 }

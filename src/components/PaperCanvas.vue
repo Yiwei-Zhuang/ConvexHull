@@ -23,6 +23,10 @@ export default {
     pointPathMap: {},
     addPoints: false,
     type2Counter: 0,
+    type3LowestPoint: null,
+    type3TangentLines: [],
+    convexHullList: [],
+    convexHullPath: null,
   }),
   created() {
 
@@ -82,6 +86,7 @@ export default {
       }
       path.selected = true;
       path.closed = true;
+      return path;
     },
     reset() {
       let temp = this.paths.pop();
@@ -175,7 +180,6 @@ export default {
           }
           let path = new paper.Path();
           this.drawPolygon(path, convexHull);
-          console.log(convexHull);
         }
       }
     }
@@ -202,8 +206,8 @@ export default {
       }
       let newList = this.points.slice();
       let convexHull = grahamScan.exec(newList);
-      algoTools.printPointList(this.points);
-      algoTools.printPointList(convexHull);
+      // algoTools.printPointList(this.points);
+      // algoTools.printPointList(convexHull);
       this.tool.onMouseDown = async (event) => {
         let clickPoint = this.p2c(event.point);
         let nearestPoint = this.getNearestPoint(clickPoint, this.points);
@@ -261,7 +265,32 @@ export default {
     }
     ,
     initType3() {
-
+      let xList = [];
+      let tempX = this.getRandomArbitrary(700, 750);
+      let tempY = this.getRandomArbitrary(500, 550);
+      let key = tempX + "," + tempY;
+      xList.push(tempX);
+      this.points.push({x: tempX, y: tempY});
+      this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
+      tempX = this.getRandomArbitrary(250, 350);
+      tempY = this.getRandomArbitrary(50, 150);
+      key = tempX + "," + tempY;
+      xList.push(tempX);
+      this.points.push({x: tempX, y: tempY});
+      this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
+      for (let i = 0; i < 6; i++) {
+        let tempX = this.getRandomArbitrary(50, 750);
+        let tempY = this.getRandomArbitrary(50, 550);
+        let key = tempX + "," + tempY;
+        if (xList.includes(tempX) || key in this.pointPathMap) {
+          i--;
+        } else {
+          xList.push(tempX);
+          this.points.push({x: tempX, y: tempY});
+          this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
+        }
+      }
+      this.convexHullList = grahamScan.exec(this.points);
     }
     ,
     initType4() {
@@ -274,8 +303,136 @@ export default {
     ,
     initType6() {
 
-    }
-    ,
+    },
+    async show(index) {
+      this.$emit("lock");
+      if (this.type === 3) {
+        if (index === 0) {
+          for (let i = 0; i < this.points.length; i++) {
+            let tempCircle = this.pointPathMap[this.points[i].x + "," + this.points[i].y];
+            tempCircle.fillColor = "#000000";
+          }
+          for (let i = 0; i < this.type3TangentLines.length; i++) {
+            this.type3TangentLines[i].line.remove();
+          }
+          this.type3TangentLines = [];
+          let minPoint = null;
+          let lastPoint = null;
+          for (let i = 0; i < this.points.length; i++) {
+            if (lastPoint && lastPoint.x !== minPoint.x && lastPoint.y !== minPoint.y) {
+              let tempCircle = this.pointPathMap[lastPoint.x + "," + lastPoint.y];
+              tempCircle.fillColor = "#000000";
+            }
+            let checkPoint = this.points[i];
+            let checkCircle = this.pointPathMap[checkPoint.x + "," + checkPoint.y];
+            checkCircle.fillColor = "#FF0000";
+            if (minPoint === null) {
+              minPoint = checkPoint;
+              checkCircle.fillColor = "#ee9a33";
+            } else {
+              if (checkPoint.y < minPoint.y) {
+                let tempCircle = this.pointPathMap[minPoint.x + "," + minPoint.y];
+                minPoint = checkPoint;
+                tempCircle.fillColor = "#000000";
+                checkCircle.fillColor = "#ee9a33";
+              }
+            }
+            lastPoint = checkPoint;
+            await new Promise(r => setTimeout(r, 500));
+          }
+          this.type3LowestPoint = minPoint;
+          if (lastPoint && lastPoint.x !== minPoint.x && lastPoint.y !== minPoint.y) {
+            let tempCircle = this.pointPathMap[lastPoint.x + "," + lastPoint.y];
+            tempCircle.fillColor = "#000000";
+          }
+        } else if (index === 1) {
+          for (let i = 0; i < this.type3TangentLines.length; i++) {
+            this.type3TangentLines[i].line.remove();
+          }
+          this.type3TangentLines = [];
+          this.type3TangentLines.push({
+            p0: {x: this.type3LowestPoint.x, y: this.type3LowestPoint.y},
+            p1: {x: 0, y: this.type3LowestPoint.y},
+            p2: {x: 800, y: this.type3LowestPoint.y},
+            line: this.drawLineSegment(this.p2c({x: 0, y: this.type3LowestPoint.y}), this.p2c({
+              x: 800,
+              y: this.type3LowestPoint.y
+            })),
+          });
+        } else if (index === 2) {
+          for (let i = 1; i < this.type3TangentLines.length; i++) {
+            this.type3TangentLines[i].line.remove();
+          }
+          this.type3TangentLines = [this.type3TangentLines[0]];
+          this.sendMessage("Although it looks like we can easily get it through rotation, we actually need O(n) to" +
+              " check slopes of target point and all other points.");
+          let x1 = this.type3LowestPoint.x;
+          let y1 = this.type3LowestPoint.y;
+          let nextPoint = this.getNextPointPosOnConvexHull(this.type3LowestPoint, this.convexHullList);
+          let x2 = nextPoint.x;
+          let y2 = nextPoint.y;
+          let lineSegment = this.type3TangentLines[0].line;
+          let passPoint = this.type3TangentLines[0].p0;
+          let b = passPoint.y;
+          let theta = 0;
+          while (theta === theta) {
+            theta += 1;
+            if (theta === 90) {
+              theta += 1;
+            }
+            let tanT = Math.tan(theta * Math.PI / 180);
+            b = passPoint.y - tanT * passPoint.x;
+            x1 = 0;
+            y1 = b;
+            x2 = this.GLOBAL_CANVAS_WIDTH;
+            y2 = x2 * tanT + b;
+            let tempY = nextPoint.x * tanT + b;
+            let o = algoTools.orient(passPoint, {x: nextPoint.x, y: tempY}, nextPoint);
+            if (o > 0) {
+              break;
+            }
+            lineSegment.remove();
+            lineSegment = this.drawLineSegment(this.p2c({x: x1, y: y1}), this.p2c({x: x2, y: y2}));
+            this.type3TangentLines[0].line = lineSegment;
+            await new Promise(r => setTimeout(r, 20));
+          }
+        } else if (index === 3) {
+          this.sendMessage("Each step uses last step's slope and arriving point as start configuration");
+          if (this.convexHullPath) {
+            this.convexHullPath.removeSegments();
+          }
+          for (let i = 1; i < this.type3TangentLines.length; i++) {
+            this.type3TangentLines[i].line.remove();
+          }
+          this.type3TangentLines = [this.type3TangentLines[0]];
+          this.type3TangentLines[0].line.opacity = 1;
+          await new Promise(r => setTimeout(r, 1000));
+          let tempPoint = this.getNextPointPosOnConvexHull(this.type3TangentLines[0].p0, this.convexHullList);
+          let tempNextPoint = this.getNextPointPosOnConvexHull(tempPoint, this.convexHullList);
+          for (let i = 0; i < this.convexHullList.length - 1; i++) {
+            let lineFunc = algoTools.getLineSlopeAndB(tempPoint, tempNextPoint);
+            let x1 = 0;
+            let y1 = lineFunc[1];
+            let x2 = 800;
+            let y2 = x2 * lineFunc[0] + lineFunc[1];
+            this.type3TangentLines.push({
+              p0: {x: tempPoint.x, y: tempPoint.y},
+              line: this.drawLineSegment(this.p2c({x: x1, y: y1}), this.p2c({x: x2, y: y2})),
+            })
+            tempPoint = tempNextPoint;
+            tempNextPoint = this.getNextPointPosOnConvexHull(tempPoint, this.convexHullList);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        } else if (index === 4) {
+          this.sendMessage("Here is the convex hull");
+          for (let i = 0; i < this.type3TangentLines.length; i++) {
+            this.type3TangentLines[i].line.opacity = 0;
+          }
+          this.convexHullPath = this.drawPolygon(this.convexHullPath, this.convexHullList);
+        }
+      }
+      this.$emit("unlock");
+    },
   }
 }
 </script>

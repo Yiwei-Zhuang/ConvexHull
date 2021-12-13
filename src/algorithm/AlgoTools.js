@@ -20,6 +20,11 @@ export default {
             list.push({x: points[i].x, y: points[i].y});
         }
         console.log(list);
-    }
+    },
+    getLineSlopeAndB(p1, p2) {
+        let slope = (p2.y - p1.y) / (p2.x - p1.x);
+        let b = p2.y - p2.x * slope;
+        return [slope, b];
+    },
 }
 
