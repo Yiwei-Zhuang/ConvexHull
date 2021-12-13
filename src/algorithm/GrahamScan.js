@@ -122,6 +122,10 @@ export default {
         }
         // lowerVisualPath.remove();
         // upperVisualPath.remove();
+        for (let i = 0; i < lowerHullList.length; i++) {
+            // Remove x+=0.00001
+            lowerHullList[i].x = Math.floor(lowerHullList[i].x);
+        }
         return lowerHullList;
     }
 }
