@@ -21,12 +21,14 @@ export default {
     GLOBAL_CANVAS_HEIGHT: 600,
     points: [],
     pointPathMap: {},
-    addPoints: false,
+    addPoints: true,
+    convexHullList: [],
+    convexHullPath: null,
     type2Counter: 0,
     type3LowestPoint: null,
     type3TangentLines: [],
-    convexHullList: [],
-    convexHullPath: null,
+
+
   }),
   created() {
 
@@ -136,6 +138,9 @@ export default {
     sendMessage(msg) {
       this.$emit("message", msg);
     },
+    pointNum() {
+      return this.points.length;
+    },
     initType1() {
       let fourCornerPoint = [{x: 400, y: 590}, {x: 401, y: 10}, {x: 10, y: 300}, {x: 790, y: 300}];
       this.points.push.apply(this.points, fourCornerPoint);
@@ -168,9 +173,9 @@ export default {
             }
           }
           if (flag) {
-            this.sendMessage("Great! It looks like those 4 points are on a convex hull which include all other points.");
+            this.sendMessage("Great! Indeed, those 4 points are on a convex hull which includes all other points.");
           } else {
-            this.sendMessage("What about these 4 points? It looks like they are on a convex hull which include all other points.");
+            this.sendMessage("What about these 4 points? It looks like they are on a convex hull which includes all other points.");
           }
           let convexHull = grahamScan.exec(this.points);
           for (let i = 0; i < convexHull.length; i++) {
@@ -294,14 +299,27 @@ export default {
     }
     ,
     initType4() {
-
+      let xList = [];
+      let yList = [];
+      this.tool.onMouseDown = (event) => {
+        if (this.addPoints) {
+          let clickPoint = this.p2c(event.point);
+          clickPoint.x = Math.floor(clickPoint.x);
+          clickPoint.y = Math.floor(clickPoint.y);
+          if (!xList.includes(clickPoint.x) && !yList.includes(clickPoint.y)) {
+            this.points.push({x: clickPoint.x, y: clickPoint.y});
+            this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
+              x: clickPoint.x,
+              y: clickPoint.y
+            }), 10);
+            xList.push(clickPoint.x);
+            yList.push(clickPoint.y);
+          }
+        }
+      }
     }
     ,
     initType5() {
-
-    }
-    ,
-    initType6() {
 
     },
     async show(index) {
@@ -346,6 +364,7 @@ export default {
             tempCircle.fillColor = "#000000";
           }
         } else if (index === 1) {
+          this.sendMessage("The horizontal line could not pass the convex hull because all other points are above it.");
           for (let i = 0; i < this.type3TangentLines.length; i++) {
             this.type3TangentLines[i].line.remove();
           }
@@ -365,7 +384,7 @@ export default {
           }
           this.type3TangentLines = [this.type3TangentLines[0]];
           this.sendMessage("Although it looks like we can easily get it through rotation, we actually need O(n) to" +
-              " check slopes of target point and all other points.");
+              " compare lines' slopes that cross target point and all other points.");
           let x1 = this.type3LowestPoint.x;
           let y1 = this.type3LowestPoint.y;
           let nextPoint = this.getNextPointPosOnConvexHull(this.type3LowestPoint, this.convexHullList);
@@ -429,6 +448,32 @@ export default {
             this.type3TangentLines[i].line.opacity = 0;
           }
           this.convexHullPath = this.drawPolygon(this.convexHullPath, this.convexHullList);
+        }
+      } else if (this.type === 4) {
+        console.log("here")
+        this.addPoints = false;
+        if (index === 0) {
+          this.sendMessage("We are going to sort points by their x coordinate ascending.");
+          let pointList = this.points.slice();
+          pointList.sort(function (p1, p2) {
+            let x1 = p1.x
+            let x2 = p2.x;
+            if (x1 === x2) {
+              p2.x += 0.00001; // Impossible!
+            }
+            if (x1 < x2) {
+              return -1;
+            }
+            if (x1 > x2) {
+              return 1;
+            }
+          });
+          for(let i = 0; i < pointList.length; i++) {
+            let circle = this.pointPathMap[pointList[i].x+","+pointList[i].y];
+            circle.opacity = (1 - (pointList.length - i) / pointList.length)/2+0.3;
+          }
+        } else if (index === 1) {
+          alert("1");
         }
       }
       this.$emit("unlock");

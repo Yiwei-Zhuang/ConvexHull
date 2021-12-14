@@ -5,7 +5,7 @@
     <div class="tile is-ancestor">
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
-          <PaperCanvas :type="3" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
+          <PaperCanvas :type="4" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
                        @unlock="lock=false"/>
         </div>
       </div>
@@ -38,17 +38,15 @@
         <div class="modal-background"></div>
         <div class="modal-card" style="max-width: 500px">
           <header class="modal-card-head">
-            <p class="modal-card-title">Remember</p>
+            <p class="modal-card-title">Explanation</p>
             <button class="delete" aria-label="close" @click.left="closePreface"></button>
           </header>
           <section class="modal-card-body">
-            <p class="content">Remember in first section, we observe some points will definitely on the convex hull
-              such as left,right,top,bottom-most points. In second section. ************************** *****************
-              ************************************ ***************** ********************************** ***************
-              *******************. Thus, we can start from a point that must be on the convex hull. Crossing that point,
-              drawing a line that will not go through the convex hull of the point set. Rotating the line and stopping
-              when it meets with another point. Gift-Wrapping could use this basic idea building a convex hull in
-              <strong>O(n^2)</strong>.</p>
+            <p class="content"> You may feel it is redundant to check and compare each line's slope for each point pair
+              and yes, you are right. We can sort those points in a way so that we can efficiently compare them and
+              prune out some point pairs which connections definitely could not be on the convex hull. Here is our next
+              algorithm, Graham Scan. It sorts all points one time and use linear time to go through those ordered
+              points and determine the convex hull in <strong>O(nlogn)</strong>.</p>
           </section>
         </div>
       </div>
@@ -65,14 +63,14 @@ export default {
   name: "GiftWrapping",
   data() {
     return {
-      msg: "Let's pick the bottom point first.",
+      msg: "Please add more than three points on our canvas first.",
       preface: true,
       lock: false,
-      currentIndex: 0,
+      currentIndex: -1,
       text: [
         {
-          msg: "Find lowest point",
-          highLight: true,
+          msg: "Sort",
+          highLight: false,
         },
         {
           msg: "Draw a horizontal line cross the lowest point",
@@ -97,22 +95,6 @@ export default {
 
   },
   methods: {
-    getMessage(msg) {
-      this.msg = msg;
-    },
-    async next() {
-      if (!this.lock && this.currentIndex < this.text.length - 1) {
-        this.currentIndex += 1;
-        for (let i = 0; i < this.text.length; i++) {
-          if (i === this.currentIndex) {
-            this.text[i].highLight = true;
-          } else {
-            this.text[i].highLight = false;
-          }
-        }
-        await this.$refs.pc.show(this.currentIndex);
-      }
-    },
     async last() {
       if (!this.lock && this.currentIndex > 0) {
         this.currentIndex -= 1;
@@ -126,11 +108,26 @@ export default {
         await this.$refs.pc.show(this.currentIndex);
       }
     },
+    async next() {
+      if (!this.lock && this.$refs.pc.pointNum() > 3 && this.currentIndex < this.text.length - 1) {
+        this.currentIndex += 1;
+        for (let i = 0; i < this.text.length; i++) {
+          if (i === this.currentIndex) {
+            this.text[i].highLight = true;
+          } else {
+            this.text[i].highLight = false;
+          }
+        }
+        await this.$refs.pc.show(this.currentIndex);
+      }
+    },
+    getMessage(msg) {
+      this.msg = msg;
+    },
     async closePreface() {
       this.preface = false;
-      await this.$refs.pc.show(this.currentIndex);
     },
-  },
+  }
 }
 </script>
 

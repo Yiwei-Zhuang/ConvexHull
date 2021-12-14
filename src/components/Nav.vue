@@ -21,6 +21,7 @@
         <router-link to="/" class="navbar-item">Hello</router-link>
         <router-link to="/wheel" class="navbar-item">Wheel</router-link>
         <router-link to="/gift-wrapping" class="navbar-item">Gift-Wrapping</router-link>
+        <router-link to="/graham-scan" class="navbar-item">Graham-Scan</router-link>
         <!--        <a v-if="backRoomBtn" class="navbar-item" @click.left="backToRoom"> Back</a>-->
       </div>
       <div class="navbar-end">
@@ -44,7 +45,7 @@ export default {
   name: 'Nav',
   data() {
     return {
-      pathList: ["/", "/wheel", "/gift-wrapping"],
+      pathList: ["/", "/wheel", "/gift-wrapping", "/graham-scan"],
     }
   },
   created() {
