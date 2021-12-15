@@ -566,7 +566,7 @@ export default {
         if (this.step < this.states.length) {
           this.readState(this.step);
         } else {
-          this.readState(this.step - 1);
+          this.readState(this.step - 1); // Load the newest state.
           if (index === 0) {
             message = "Point color becomes darker as its x coordinate increasing.";
             let pointList = this.points.slice();
@@ -633,6 +633,8 @@ export default {
           this.sendMessage(message);
           this.saveState(index, message);
         }
+      } else if (this.type === 5) {
+        alert("SHOW type === 5");
       }
       this.$emit("unlock");
     }

@@ -108,11 +108,7 @@ export default {
       if (!this.lock && this.currentIndex > 0) {
         this.currentIndex = this.$refs.pc.lastState();
         for (let i = 0; i < this.text.length; i++) {
-          if (i === this.currentIndex) {
-            this.text[i].highLight = true;
-          } else {
-            this.text[i].highLight = false;
-          }
+          this.text[i].highLight = i === this.currentIndex;
         }
       }
     },
@@ -142,11 +138,7 @@ export default {
           await this.$refs.pc.show(this.currentIndex);
         }
         for (let i = 0; i < this.text.length; i++) {
-          if (i === this.currentIndex) {
-            this.text[i].highLight = true;
-          } else {
-            this.text[i].highLight = false;
-          }
+          this.text[i].highLight = i === this.currentIndex;
         }
       }
     },
