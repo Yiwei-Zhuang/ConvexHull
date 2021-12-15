@@ -5,8 +5,8 @@
     <div class="tile is-ancestor">
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
-          <PaperCanvas :type="4" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
-                       @unlock="lock=false" @goto="goto"/>
+          <PaperCanvas :type="5" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
+                       @unlock="lock=false"/>
         </div>
       </div>
       <div class="tile is-vertical is-parent">
@@ -43,11 +43,7 @@
             <button class="delete" aria-label="close" @click.left="closePreface"></button>
           </header>
           <section class="modal-card-body">
-            <p class="content"> You may feel it is redundant to check and compare each line's slope for each point pair
-              and yes, you are right. We can sort those points in a way so that we can efficiently compare them and
-              prune out some point pairs whose connections definitely could not be on the convex hull. Here is our next
-              algorithm, Graham Scan. It sorts all points one time and use linear time to go through those ordered
-              points and determine the convex hull in <strong>O(nlogn)</strong>.</p>
+            <p class="content"> determine the convex hull in <strong>O(nlogn)</strong>.</p>
           </section>
         </div>
       </div>
@@ -60,8 +56,8 @@ import Nav from "../components/Nav";
 import PaperCanvas from "../components/PaperCanvas";
 
 export default {
+  name: "MergeHull",
   components: {Nav, PaperCanvas},
-  name: "GrahamScan",
   data() {
     return {
       msg: "Please add more than three points on our canvas first.",
@@ -74,81 +70,53 @@ export default {
           highLight: false,
         },
         {
-          msg: "Handling lower hull",
+          msg: "Divide",
           highLight: false,
         },
         {
-          msg: "Pick last two elements in lower hull path, P1,P2, and next point from sorted point list as P3",
+          msg: "Brutal force compute convex hull"
+        },
+        {
+          msg: "Merge",
           highLight: false,
         },
         {
-          msg: "Is P1P2P3 turn left?",
+          msg: "Find and connect upper and lower tangent lines",
           highLight: false,
         },
-        {
-          msg: "Turn left! Add P3 to lower hull!",
-          highLight: false,
-        },
-        {
-          msg: "Turn right! Pop out P2! Reevaluate P3!",
-          highLight: false,
-        },
-        {
-          msg: "Finish lower hull",
-          highLight: false,
-        },
-        {
-          msg: "Finish upper hull",
-          highLight: false,
-        }
       ],
     }
   },
-  mounted() {
-
+  async mounted() {
   },
   methods: {
     async last() {
-      if (!this.lock && this.currentIndex > 0) {
-        this.currentIndex = this.$refs.pc.lastState();
-        for (let i = 0; i < this.text.length; i++) {
-          this.text[i].highLight = i === this.currentIndex;
-        }
+      let index = this.$refs.pc.type5LastState();
+      if (index !== null) {
+        this.currentIndex = index;
+
+      } else {
+        this.currentIndex = 0;
+        await this.$refs.pc.show(this.currentIndex);
+      }
+      for (let i = 0; i < this.text.length; i++) {
+        this.text[i].highLight = i === this.currentIndex;
       }
     },
     async next() {
-      if (!this.lock && this.$refs.pc.pointNum() > 3 && this.currentIndex < this.text.length - 1) {
-        let nextState = this.$refs.pc.nextState();
-        if (nextState !== null) {
-          this.currentIndex = nextState;
-        } else {
-          if (this.currentIndex === 2) {
-            if (this.$refs.pc.endOfCheck()) {
-              this.currentIndex = 6;
-            } else {
-              this.currentIndex = 3;
-            }
-          } else if (this.currentIndex === 3) {
-            if (this.$refs.pc.currentTurn() < 0) {
-              this.currentIndex = 4;
-            } else {
-              this.currentIndex = 5;
-            }
-          } else if (this.currentIndex === 4) {
-            if (this.$refs.pc.endOfCheck()) {
-              this.currentIndex = 6;
-            } else {
-              this.currentIndex = 2;
-            }
-          } else if (this.currentIndex === 5) {
-            this.currentIndex = 2;
-          } else {
-            this.currentIndex += 1;
-          }
-          await this.$refs.pc.show(this.currentIndex);
-        }
+      if (this.currentIndex === -1) {
+        this.currentIndex++;
         for (let i = 0; i < this.text.length; i++) {
           this.text[i].highLight = i === this.currentIndex;
+        }
+        await this.$refs.pc.show(0);
+      } else {
+        let index = this.$refs.pc.type5NextState();
+        if (index !== null) {
+          this.currentIndex = index;
+          for (let i = 0; i < this.text.length; i++) {
+            this.text[i].highLight = i === this.currentIndex;
+          }
         }
       }
     },
@@ -163,14 +131,10 @@ export default {
     getMessage(msg) {
       this.msg = msg;
     },
-    goto(index) {
-      this.currentIndex = index - 1;
-    },
-    async closePreface() {
+    closePreface() {
       this.preface = false;
-      await this.reset();
     },
-  }
+  },
 }
 </script>
 

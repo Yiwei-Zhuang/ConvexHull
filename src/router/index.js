@@ -25,6 +25,11 @@ const routes = [
         name: "GrahamScan",
         component: () => import("../views/GrahamScan.vue"),
     },
+    {
+        path: "/merge-hull",
+        name: "MergeHull",
+        component: () => import("../views/MergeHull.vue"),
+    },
 ]
 
 const router = new VueRouter({

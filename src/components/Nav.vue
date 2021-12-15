@@ -22,6 +22,7 @@
         <router-link to="/wheel" class="navbar-item">Wheel</router-link>
         <router-link to="/gift-wrapping" class="navbar-item">Gift-Wrapping</router-link>
         <router-link to="/graham-scan" class="navbar-item">Graham-Scan</router-link>
+        <router-link to="/merge-hull" class="navbar-item">Merge-Hull</router-link>
         <!--        <a v-if="backRoomBtn" class="navbar-item" @click.left="backToRoom"> Back</a>-->
       </div>
       <div class="navbar-end">

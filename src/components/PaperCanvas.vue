@@ -7,7 +7,12 @@
 <script>
 const paper = require("paper");
 import grahamScan from "../algorithm/GrahamScan";
+import mergeHull from "../algorithm/MergeHull";
 import algoTools from "../algorithm/AlgoTools";
+
+const primary = "#00d1b2";
+const link = "#3273dc";
+const complete = "#ee9a33";
 
 export default {
   name: "PaperCanvas",
@@ -32,6 +37,8 @@ export default {
     type3LowestPoint: null,
     type3TangentLines: [],
     type4PointIndex: 0,
+    type5LeftPath: null,
+    type5RightPath: null,
   }),
   created() {
 
@@ -124,6 +131,14 @@ export default {
         strokeColor: "#000000",
       });
       this.displayPointList = [];
+      if (this.type5LeftPath != null) {
+        this.type5LeftPath.removeSegments();
+        this.type5LeftPath = null;
+      }
+      if (this.type5RightPath != null) {
+        this.type5RightPath.removeSegments();
+        this.type5RightPath = null;
+      }
     },
     p2c(p) {
       return new paper.Point(p.x, Math.floor(this.GLOBAL_CANVAS_HEIGHT - p.y));
@@ -247,6 +262,80 @@ export default {
         return null;
       }
     },
+    type5ReadState() {
+      this.resetDisplay();
+      let state = this.states[this.step];
+      if (state.type === 1) {
+        // Divide
+        let left = state.left;
+        let right = state.right;
+        let leftColor = primary;
+        let rightColor = link;
+        for (let j = 0; j < left.length; j++) {
+          this.getPointPath(left[j]).fillColor = leftColor;
+        }
+        for (let j = 0; j < right.length; j++) {
+          this.getPointPath(right[j]).fillColor = rightColor;
+        }
+      } else if (state.type === 2) {
+        // Brutal force compute convex hull
+        let color = primary;
+        if (state.part === 1) {
+          color = link;
+        }
+        for (let j = 0; j < state.points.length; j++) {
+          this.displayPath.add(this.p2c(state.points[j]));
+          this.getPointPath(state.points[j]).fillColor = color;
+        }
+        this.displayPath.add(this.p2c(state.points[0]));
+      } else if (state.type === 3) {
+        // Conquer
+        let left = state.left;
+        let right = state.right;
+        let leftColor = primary;
+        let rightColor = link;
+        this.type5LeftPath = new paper.Path({
+          strokeColor: "#000000",
+        });
+        this.type5RightPath = new paper.Path({
+          strokeColor: "#000000",
+        });
+        for (let j = 0; j < left.length; j++) {
+          this.getPointPath(left[j]).fillColor = leftColor;
+          this.type5LeftPath.add(this.p2c(left[j]));
+        }
+        this.type5LeftPath.add(this.p2c(left[0]));
+        for (let j = 0; j < right.length; j++) {
+          this.getPointPath(right[j]).fillColor = rightColor;
+          this.type5RightPath.add(this.p2c(right[j]));
+        }
+        this.type5RightPath.add(this.p2c(right[0]));
+      } else if (state.type === 4) {
+        // Find and connect tangent line
+        for (let j = 0; j < state.points.length; j++) {
+          this.displayPath.add(this.p2c(state.points[j]));
+          this.getPointPath(state.points[j]).fillColor = complete;
+        }
+        this.displayPath.add(this.p2c(state.points[0]));
+      }
+      return state.type;
+    },
+    type5NextState() {
+      if (this.step + 1 < this.states.length) {
+        this.step++;
+        return this.type5ReadState();
+      } else {
+        return null;
+      }
+    },
+    type5LastState() {
+      if (this.step - 1 >= 0) {
+        this.step--;
+        return this.type5ReadState();
+      } else {
+        return null;
+      }
+    },
     initType1() {
       let fourCornerPoint = [{x: 400, y: 590}, {x: 401, y: 10}, {x: 10, y: 300}, {x: 790, y: 300}];
       this.points.push.apply(this.points, fourCornerPoint);
@@ -287,7 +376,7 @@ export default {
           for (let i = 0; i < convexHull.length; i++) {
             let point = convexHull[i];
             let circle = this.pointPathMap[point.x + "," + point.y];
-            circle.fillColor = "#ee9a33";
+            circle.fillColor = complete;
           }
           let path = new paper.Path();
           this.drawPolygon(path, convexHull);
@@ -326,7 +415,7 @@ export default {
           let nextPoint = this.getNextPointPosOnConvexHull(nearestPoint, convexHull);
           clickedPoints.push(nearestPoint.x + "," + nearestPoint.y);
           let circle = this.pointPathMap[nearestPoint.x + "," + nearestPoint.y];
-          circle.fillColor = "#ee9a33";
+          circle.fillColor = complete;
           if (nearestPoint.y - centerY === 0) {
             this.drawLineSegment({x: nearestPoint.x, y: 0}, {
               x: nearestPoint.x,
@@ -426,7 +515,24 @@ export default {
     }
     ,
     initType5() {
-
+      let xList = [];
+      let yList = [];
+      this.tool.onMouseDown = (event) => {
+        if (this.addPoints) {
+          let clickPoint = this.p2c(event.point);
+          clickPoint.x = Math.floor(clickPoint.x);
+          clickPoint.y = Math.floor(clickPoint.y);
+          if (!xList.includes(clickPoint.x) && !yList.includes(clickPoint.y)) {
+            this.points.push({x: clickPoint.x, y: clickPoint.y});
+            this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
+              x: clickPoint.x,
+              y: clickPoint.y
+            }), 10);
+            xList.push(clickPoint.x);
+            yList.push(clickPoint.y);
+          }
+        }
+      }
     }
     ,
     async show(index) {
@@ -453,13 +559,13 @@ export default {
             checkCircle.fillColor = "#FF0000";
             if (minPoint === null) {
               minPoint = checkPoint;
-              checkCircle.fillColor = "#ee9a33";
+              checkCircle.fillColor = complete;
             } else {
               if (checkPoint.y < minPoint.y) {
                 let tempCircle = this.pointPathMap[minPoint.x + "," + minPoint.y];
                 minPoint = checkPoint;
                 tempCircle.fillColor = "#000000";
-                checkCircle.fillColor = "#ee9a33";
+                checkCircle.fillColor = complete;
               }
             }
             lastPoint = checkPoint;
@@ -608,8 +714,8 @@ export default {
             }
             let p1 = this.displayPointList[this.displayPointList.length - 2];
             let p2 = this.displayPointList[this.displayPointList.length - 1];
-            this.getPointPath(p1).fillColor = "#ee9a33";
-            this.getPointPath(p2).fillColor = "#ee9a33";
+            this.getPointPath(p1).fillColor = complete;
+            this.getPointPath(p2).fillColor = complete;
             if (this.endOfCheck()) {
               message = "There are only two possible points could be on lower hull, so we have nothing need to do" +
                   " but connect them.";
@@ -624,7 +730,7 @@ export default {
           } else if (index === 4) {
             message = "Here is partial lower hull.";
             let p3 = this.sortedPoints[this.type4PointIndex];
-            this.getPointPath(p3).fillColor = "#ee9a33";
+            this.getPointPath(p3).fillColor = complete;
             this.displayPointList.push(p3);
             this.type4PointIndex++;
           } else if (index === 5) {
@@ -640,7 +746,7 @@ export default {
             message = "Great! We found all points on convex hull in CCW order."
             this.resetDisplay();
             for (let i = 0; i < this.convexHullList.length; i++) {
-              this.getPointPath(this.convexHullList[i]).fillColor = "#ee9a33";
+              this.getPointPath(this.convexHullList[i]).fillColor = complete;
               this.displayPath.add(this.p2c(this.convexHullList[i]));
             }
             this.displayPath.add(this.p2c(this.convexHullList[0]));
@@ -649,7 +755,37 @@ export default {
           this.saveState(index, message);
         }
       } else if (this.type === 5) {
-        alert("SHOW type === 5");
+        let message = "";
+        this.addPoints = false;
+        if (this.convexHullList.length < 3) {
+          let mergeHullResult = mergeHull.exec(this.points);
+          this.states = mergeHullResult.process;
+          this.convexHullList = mergeHullResult.result;
+        }
+        if (index === 0) {
+          this.resetDisplay();
+          message = "Point color becomes darker as its x coordinate increasing.";
+          let pointList = this.points.slice();
+          pointList.sort(function (p1, p2) {
+            let x1 = p1.x
+            let x2 = p2.x;
+            if (x1 === x2) {
+              p2.x += 0.00001; // Impossible!
+            }
+            if (x1 < x2) {
+              return -1;
+            }
+            if (x1 > x2) {
+              return 1;
+            }
+          });
+          this.sortedPoints = pointList.slice();
+          for (let i = 0; i < pointList.length; i++) {
+            let circle = this.pointPathMap[pointList[i].x + "," + pointList[i].y];
+            circle.opacity = (1 - (pointList.length - i) / pointList.length) / 2 + 0.3;
+          }
+        }
+        this.sendMessage(message);
       }
       this.$emit("unlock");
     }
