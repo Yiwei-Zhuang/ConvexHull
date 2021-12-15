@@ -16,19 +16,22 @@ export default {
     path: null,
     scope: null,
     tool: null,
-    paths: [],
     GLOBAL_CANVAS_WIDTH: 800,
     GLOBAL_CANVAS_HEIGHT: 600,
     points: [],
     pointPathMap: {},
+    sortedPoints: [],
     addPoints: true,
     convexHullList: [],
     convexHullPath: null,
+    displayPath: null,
+    displayPointList: [],
+    states: [],
+    step: -1,
     type2Counter: 0,
     type3LowestPoint: null,
     type3TangentLines: [],
-
-
+    type4PointIndex: 0,
   }),
   created() {
 
@@ -37,6 +40,9 @@ export default {
     this.scope = new paper.PaperScope();
     this.scope.setup(this.canvasId);
     this.tool = this.createTool(this.scope);
+    this.displayPath = new paper.Path({
+      strokeColor: "#000000",
+    });
     if (this.type === 1) {
       this.initType1();
     } else if (this.type === 2) {
@@ -91,13 +97,33 @@ export default {
       return path;
     },
     reset() {
-      let temp = this.paths.pop();
-      while (temp) {
-        temp.remove();
-        temp = this.paths.pop();
+      for (const [, value] of Object.entries(this.pointPathMap)) {
+        value.remove();
       }
-      this.path = null;
-      this.paths = [];
+      this.pointPathMap = {};
+      this.points = [];
+      this.sortedPoints = [];
+      this.addPoints = true;
+      this.convexHullList = [];
+      if (this.convexHullPath) {
+        this.convexHullPath.removeSegments();
+      }
+      this.convexHullPath = null;
+      this.resetDisplay();
+      this.states = [];
+      this.step = -1;
+    },
+    resetDisplay() {
+      for (let i = 0; i < this.points.length; i++) {
+        this.getPointPath(this.points[i]).fillColor = "#000000";
+      }
+      if (this.displayPath) {
+        this.displayPath.removeSegments();
+      }
+      this.displayPath = new paper.Path({
+        strokeColor: "#000000",
+      });
+      this.displayPointList = [];
     },
     p2c(p) {
       return new paper.Point(p.x, Math.floor(this.GLOBAL_CANVAS_HEIGHT - p.y));
@@ -140,6 +166,86 @@ export default {
     },
     pointNum() {
       return this.points.length;
+    },
+    getPointPath(point) {
+      return this.pointPathMap[point.x + "," + point.y];
+    },
+    currentTurn() {
+      if (this.displayPointList.length < 2) {
+        return -1;
+      }
+      let p1 = this.displayPointList[this.displayPointList.length - 2];
+      let p2 = this.displayPointList[this.displayPointList.length - 1];
+      let p3 = this.sortedPoints[this.type4PointIndex];
+      return algoTools.orient(p1, p2, p3);
+    },
+    endOfCheck() {
+      return this.sortedPoints.length > 0 && this.type4PointIndex >= this.sortedPoints.length;
+    },
+    printStates() {
+      for (let i = 0; i < this.states.length; i++) {
+        let state = this.states[i];
+        console.log({
+          color: state.pointsColor,
+          index: state.index,
+          type4PointIndex: state.type4PointIndex,
+          displayPathPoints: state.displayPathPoints,
+        });
+      }
+    },
+    saveState(index, message) {
+      let pointsColor = [];
+      let displayPathPoints = [];
+      for (let i = 0; i < this.points.length; i++) {
+        pointsColor.push(this.getPointPath(this.points[i]).fillColor);
+      }
+      let segments = this.displayPath.segments;
+      for (let i = 0; i < segments.length; i++) {
+        displayPathPoints.push({x: segments[i].point.x, y: segments[i].point.y});
+      }
+      this.states.push({
+        message: message,
+        index: index,
+        type4PointIndex: this.type4PointIndex,
+        pointsColor: pointsColor,
+        displayPointList: this.displayPointList,
+        displayPathPoints: displayPathPoints,
+      });
+    },
+    readState(step) {
+      let state = this.states[step];
+      if (!state) {
+        return;
+      }
+      this.resetDisplay();
+      this.type4PointIndex = state.type4PointIndex;
+      let pointsColor = state.pointsColor;
+      for (let i = 0; i < this.points.length; i++) {
+        this.getPointPath(this.points[i]).fillColor = pointsColor[i];
+      }
+      let displayPathPoints = state.displayPathPoints;
+      for (let i = 0; i < displayPathPoints.length; i++) {
+        this.displayPath.add(displayPathPoints[i]);
+      }
+      this.displayPointList = state.displayPointList;
+      this.sendMessage(state.message);
+      return state.index;
+    },
+    nextState() {
+      if (this.step + 1 < this.states.length) {
+        this.step++;
+        return this.readState(this.step);
+      } else {
+        return null;
+      }
+    },
+    lastState() {
+      if (this.step - 1 >= 0) {
+        this.step--;
+        return this.readState(this.step);
+      } else {
+        return null;
+      }
     },
     initType1() {
       let fourCornerPoint = [{x: 400, y: 590}, {x: 401, y: 10}, {x: 10, y: 300}, {x: 790, y: 300}];
@@ -321,7 +427,8 @@ export default {
     ,
     initType5() {
 
-    },
+    }
+    ,
     async show(index) {
       this.$emit("lock");
       if (this.type === 3) {
@@ -450,34 +557,86 @@ export default {
           this.convexHullPath = this.drawPolygon(this.convexHullPath, this.convexHullList);
         }
       } else if (this.type === 4) {
-        console.log("here")
+        let message = "";
         this.addPoints = false;
-        if (index === 0) {
-          this.sendMessage("We are going to sort points by their x coordinate ascending.");
-          let pointList = this.points.slice();
-          pointList.sort(function (p1, p2) {
-            let x1 = p1.x
-            let x2 = p2.x;
-            if (x1 === x2) {
-              p2.x += 0.00001; // Impossible!
+        if (this.convexHullList.length < 3) {
+          this.convexHullList = grahamScan.exec(this.points);
+        }
+        this.step++;
+        if (this.step < this.states.length) {
+          this.readState(this.step);
+        } else {
+          this.readState(this.step - 1);
+          if (index === 0) {
+            message = "Point color becomes darker as its x coordinate increasing.";
+            let pointList = this.points.slice();
+            pointList.sort(function (p1, p2) {
+              let x1 = p1.x
+              let x2 = p2.x;
+              if (x1 === x2) {
+                p2.x += 0.00001; // Impossible!
+              }
+              if (x1 < x2) {
+                return -1;
+              }
+              if (x1 > x2) {
+                return 1;
+              }
+            });
+            this.sortedPoints = pointList.slice();
+            for (let i = 0; i < pointList.length; i++) {
+              let circle = this.pointPathMap[pointList[i].x + "," + pointList[i].y];
+              circle.opacity = (1 - (pointList.length - i) / pointList.length) / 2 + 0.3;
             }
-            if (x1 < x2) {
-              return -1;
+          } else if (index === 1) {
+            message = "Initialize lower hull by adding first two points from sorted point list to lower hull path."
+            let point1 = this.p2c(this.sortedPoints[0]);
+            let point2 = this.p2c(this.sortedPoints[1]);
+            this.displayPath.add(new paper.Point(point1.x, point1.y));
+            this.displayPath.add(new paper.Point(point2.x, point2.y));
+            this.displayPointList.push(this.sortedPoints[0], this.sortedPoints[1]);
+            this.type4PointIndex = 2;
+          } else if (index === 2) {
+            if (this.displayPointList.length < 2) {
+              message = "Because there are only one point in lower hull path," +
+                  " we can directly add P3 to the lower hull path and check next point.";
+              this.displayPointList.push(this.sortedPoints[this.type4PointIndex]);
+              this.displayPath.add(this.p2c(this.sortedPoints[this.type4PointIndex]));
+              this.type4PointIndex++;
+            } else {
+              message = "Yellow points are P1, P2; Red point is P3.";
             }
-            if (x1 > x2) {
-              return 1;
-            }
-          });
-          for(let i = 0; i < pointList.length; i++) {
-            let circle = this.pointPathMap[pointList[i].x+","+pointList[i].y];
-            circle.opacity = (1 - (pointList.length - i) / pointList.length)/2+0.3;
+            let p1 = this.displayPointList[this.displayPointList.length - 2];
+            let p2 = this.displayPointList[this.displayPointList.length - 1];
+            let p3 = this.sortedPoints[this.type4PointIndex];
+            this.getPointPath(p1).fillColor = "#ee9a33";
+            this.getPointPath(p2).fillColor = "#ee9a33";
+            this.getPointPath(p3).fillColor = "#FF0000";
+          } else if (index === 3) {
+            message = "Connect P1 P2 P3 in order.";
+            let p3 = this.sortedPoints[this.type4PointIndex];
+            this.displayPath.add(this.p2c(p3));
+          } else if (index === 4) {
+            let p3 = this.sortedPoints[this.type4PointIndex];
+            this.getPointPath(p3).fillColor = "#ee9a33";
+            this.displayPointList.push(p3);
+            this.type4PointIndex++;
+          } else if (index === 5) {
+            message = "Remove P2 in convex hull path for the reason it is above line segment P1P3.";
+            let p2 = this.displayPointList.pop();
+            this.getPointPath(p2).fillColor = "#000000";
+            this.displayPath.removeSegment(this.displayPath.segments.length - 1);
+            this.displayPath.removeSegment(this.displayPath.segments.length - 1);
+          } else if (index === 6) {
+            message = "6";
           }
-        } else if (index === 1) {
-          alert("1");
+          this.sendMessage(message);
+          this.saveState(index, message);
         }
       }
       this.$emit("unlock");
-    },
+    }
+    ,
   }
 }
 </script>

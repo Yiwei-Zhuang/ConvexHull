@@ -6,7 +6,7 @@
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
           <PaperCanvas :type="4" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
-                       @unlock="lock=false"/>
+                       @unlock="lock=false" @goto="goto"/>
         </div>
       </div>
       <div class="tile is-vertical is-parent">
@@ -27,6 +27,7 @@
           </div>
         </div>
         <div class="tile is-child">
+          <button class="button" @click.left="reset" :disabled="lock"><strong> Reset </strong></button>
           <button class="button" @click.left="last" :disabled="lock"><strong> Last </strong></button>
           <button class="button" @click.left="next" :disabled="lock"><strong> Next </strong></button>
         </div>
@@ -60,7 +61,7 @@ import PaperCanvas from "../components/PaperCanvas";
 
 export default {
   components: {Nav, PaperCanvas},
-  name: "GiftWrapping",
+  name: "GrahamScan",
   data() {
     return {
       msg: "Please add more than three points on our canvas first.",
@@ -69,23 +70,31 @@ export default {
       currentIndex: -1,
       text: [
         {
-          msg: "Sort",
+          msg: "Sorting points by their X coordinate ascending",
           highLight: false,
         },
         {
-          msg: "Draw a horizontal line cross the lowest point",
+          msg: "Handling lower hull",
           highLight: false,
         },
         {
-          msg: "Rotating the horizontal line in CCW direction and stop when it intersects with another point",
+          msg: "Pick last two elements in lower hull path, P1,P2, and next point from sorted point list as P3",
           highLight: false,
         },
         {
-          msg: "Repeatedly find bounding lines",
+          msg: "Is P1P2P3 turn left?",
           highLight: false,
         },
         {
-          msg: "Clean up",
+          msg: "Turn left! Add P3 to lower hull!",
+          highLight: false,
+        },
+        {
+          msg: "Turn right! Pop out P2! Reevaluate P3!",
+          highLight: false,
+        },
+        {
+          msg: "Finish lower hull",
           highLight: false,
         }
       ],
@@ -97,7 +106,7 @@ export default {
   methods: {
     async last() {
       if (!this.lock && this.currentIndex > 0) {
-        this.currentIndex -= 1;
+        this.currentIndex = this.$refs.pc.lastState();
         for (let i = 0; i < this.text.length; i++) {
           if (i === this.currentIndex) {
             this.text[i].highLight = true;
@@ -105,12 +114,33 @@ export default {
             this.text[i].highLight = false;
           }
         }
-        await this.$refs.pc.show(this.currentIndex);
       }
     },
     async next() {
       if (!this.lock && this.$refs.pc.pointNum() > 3 && this.currentIndex < this.text.length - 1) {
-        this.currentIndex += 1;
+        let nextState = this.$refs.pc.nextState();
+        if (nextState !== null) {
+          this.currentIndex = nextState;
+        } else {
+          if (this.currentIndex === 3) {
+            if (this.$refs.pc.currentTurn() < 0) {
+              this.currentIndex = 4;
+            } else {
+              this.currentIndex = 5;
+            }
+          } else if (this.currentIndex === 4) {
+            if (this.$refs.pc.endOfCheck()) {
+              this.currentIndex = 6;
+            } else {
+              this.currentIndex = 2;
+            }
+          } else if (this.currentIndex === 5) {
+            this.currentIndex = 2;
+          } else {
+            this.currentIndex += 1;
+          }
+          await this.$refs.pc.show(this.currentIndex);
+        }
         for (let i = 0; i < this.text.length; i++) {
           if (i === this.currentIndex) {
             this.text[i].highLight = true;
@@ -118,11 +148,21 @@ export default {
             this.text[i].highLight = false;
           }
         }
-        await this.$refs.pc.show(this.currentIndex);
       }
+    },
+    async reset() {
+      this.currentIndex = -1;
+      for (let i = 0; i < this.text.length; i++) {
+        this.text[i].highLight = false;
+      }
+      this.msg = "Please add more than three points on our canvas first.";
+      await this.$refs.pc.reset();
     },
     getMessage(msg) {
       this.msg = msg;
+    },
+    goto(index) {
+      this.currentIndex = index - 1;
     },
     async closePreface() {
       this.preface = false;
