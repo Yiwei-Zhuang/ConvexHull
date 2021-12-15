@@ -1,7 +1,7 @@
 <template>
   <div>
     <Nav ref="nav"/>
-    <h1 class="title">{{ msg }}</h1>
+    <h1 class="subtitle">{{ msg }}</h1>
     <div class="tile is-ancestor">
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
@@ -45,7 +45,7 @@
           <section class="modal-card-body">
             <p class="content"> You may feel it is redundant to check and compare each line's slope for each point pair
               and yes, you are right. We can sort those points in a way so that we can efficiently compare them and
-              prune out some point pairs which connections definitely could not be on the convex hull. Here is our next
+              prune out some point pairs whose connections definitely could not be on the convex hull. Here is our next
               algorithm, Graham Scan. It sorts all points one time and use linear time to go through those ordered
               points and determine the convex hull in <strong>O(nlogn)</strong>.</p>
           </section>
@@ -96,6 +96,10 @@ export default {
         {
           msg: "Finish lower hull",
           highLight: false,
+        },
+        {
+          msg: "Finish upper hull",
+          highLight: false,
         }
       ],
     }
@@ -118,7 +122,13 @@ export default {
         if (nextState !== null) {
           this.currentIndex = nextState;
         } else {
-          if (this.currentIndex === 3) {
+          if (this.currentIndex === 2) {
+            if (this.$refs.pc.endOfCheck()) {
+              this.currentIndex = 6;
+            } else {
+              this.currentIndex = 3;
+            }
+          } else if (this.currentIndex === 3) {
             if (this.$refs.pc.currentTurn() < 0) {
               this.currentIndex = 4;
             } else {

@@ -42,7 +42,7 @@
             <button class="delete" aria-label="close" @click.left="closePreface"></button>
           </header>
           <section class="modal-card-body">
-            <p class="content">Remember in first section, we observe some points will definitely on the convex hull
+            <p class="content">Remember in first section, we observe some points will definitely be on the convex hull
               such as left,right,top,bottom-most points. In second section. ************************** *****************
               ************************************ ***************** ********************************** ***************
               *******************. Thus, we can start from a point that must be on the convex hull. Crossing that point,

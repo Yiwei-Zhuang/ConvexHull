@@ -608,15 +608,21 @@ export default {
             }
             let p1 = this.displayPointList[this.displayPointList.length - 2];
             let p2 = this.displayPointList[this.displayPointList.length - 1];
-            let p3 = this.sortedPoints[this.type4PointIndex];
             this.getPointPath(p1).fillColor = "#ee9a33";
             this.getPointPath(p2).fillColor = "#ee9a33";
-            this.getPointPath(p3).fillColor = "#FF0000";
+            if (this.endOfCheck()) {
+              message = "There are only two possible points could be on lower hull, so we have nothing need to do" +
+                  " but connect them.";
+            } else {
+              let p3 = this.sortedPoints[this.type4PointIndex];
+              this.getPointPath(p3).fillColor = "#FF0000";
+            }
           } else if (index === 3) {
             message = "Connect P1 P2 P3 in order.";
             let p3 = this.sortedPoints[this.type4PointIndex];
             this.displayPath.add(this.p2c(p3));
           } else if (index === 4) {
+            message = "Here is partial lower hull.";
             let p3 = this.sortedPoints[this.type4PointIndex];
             this.getPointPath(p3).fillColor = "#ee9a33";
             this.displayPointList.push(p3);
@@ -628,7 +634,16 @@ export default {
             this.displayPath.removeSegment(this.displayPath.segments.length - 1);
             this.displayPath.removeSegment(this.displayPath.segments.length - 1);
           } else if (index === 6) {
-            message = "6";
+            message = "The algorithm has almost been finished since the algorithm for lower hull can be used for upper" +
+                " hull if we rotate the whole graph 180 degree.";
+          } else if (index === 7) {
+            message = "Great! We found all points on convex hull in CCW order."
+            this.resetDisplay();
+            for (let i = 0; i < this.convexHullList.length; i++) {
+              this.getPointPath(this.convexHullList[i]).fillColor = "#ee9a33";
+              this.displayPath.add(this.p2c(this.convexHullList[i]));
+            }
+            this.displayPath.add(this.p2c(this.convexHullList[0]));
           }
           this.sendMessage(message);
           this.saveState(index, message);
