@@ -50,50 +50,69 @@ function leftMostPointIndex(pl) {
 }
 
 function mergeSubHull(pointList1, pointList2, process) {
+    let pl1MinX = pointList1[leftMostPointIndex(pointList1)].x;
+    let pl1MaxX = pointList1[rightMostPointIndex(pointList1)].x
+    let pl2MinX = pointList2[leftMostPointIndex(pointList2)].x;
+    let pl2MaxX = pointList2[rightMostPointIndex(pointList2)].x
     if (pointList1.length < 6) {
         pointList1 = grahamScan.exec(pointList1);
         process.push({
+            type: BRUTAL,
             points: pointList1.slice(),
             part: LEFT,
-            type: BRUTAL,
+            xMin: pl1MinX,
+            xMax: pl2MaxX,
+            message: "Use any way you like to find the convex hull for this small point set.",
         })
     } else {
         let mid = Math.floor(pointList1.length / 2);
         let leftPart = pointList1.slice(0, mid);
         let rightPart = pointList1.slice(mid, pointList1.length);
         process.push({
+            type: DIVIDE,
             left: leftPart.slice(),
             right: rightPart.slice(),
             mid: pointList1[mid],
-            type: DIVIDE,
+            xMin: pl1MinX,
+            xMax: pl1MaxX,
+            message: "Divide current sub-point set into left part and right part.",
         })
         pointList1 = mergeSubHull(leftPart, rightPart, process);
     }
     if (pointList2.length < 6) {
         pointList2 = grahamScan.exec(pointList2);
         process.push({
+            type: BRUTAL,
             points: pointList2.slice(),
             part: RIGHT,
-            type: BRUTAL,
+            xMin:pl1MinX,
+            xMax: pl2MaxX,
+            message: "Use any way you like to find the convex hull for this small point set.",
         })
     } else {
         let mid = Math.floor(pointList2.length / 2);
         let leftPart = pointList2.slice(0, mid);
         let rightPart = pointList2.slice(mid, pointList2.length);
         process.push({
+            type: DIVIDE,
             left: leftPart.slice(),
             right: rightPart.slice(),
             mid: pointList2[mid],
-            type: DIVIDE,
+            xMin: pl2MinX,
+            xMax: pl2MaxX,
+            message: "Divide current sub-point set into left part and right part.",
         })
         pointList2 = mergeSubHull(leftPart, rightPart, process);
     }
     let pl1RightMostIndex = rightMostPointIndex(pointList1);
     let pl2LeftMostIndex = leftMostPointIndex(pointList2);
     process.push({
+        type: MERGE, // Ready to merge two parts
         left: pointList1.slice(),
         right: pointList2.slice(),
-        type: MERGE, // Ready to merge two parts
+        xMin: pl1MinX,
+        xMax: pl2MaxX,
+        message: "Left and right parts' convex hull has been constructed.",
     })
     // Find upper tangent
     let upperTangentLeftIndex = pl1RightMostIndex;
@@ -163,8 +182,11 @@ function mergeSubHull(pointList1, pointList2, process) {
     leftPointList.push.apply(leftPointList, rightPointList);
     process[process.length - 1].whole = leftPointList.slice();
     process.push({
-        points: leftPointList,
         type: CONNECT_TANGENT,
+        points: leftPointList,
+        xMin: pl1MinX,
+        xMax: pl2MaxX,
+        message: "Connect tangent lines in linear time.",
     })
     return leftPointList;
 }
@@ -192,10 +214,13 @@ export default {
         let leftPart = pointList.slice(0, mid);
         let rightPart = pointList.slice(mid, pointList.length);
         let process = [{
+            type: DIVIDE, // divide
             left: leftPart.slice(),
             right: rightPart.slice(),
             mid: pointList[mid],
-            type: DIVIDE, // divide
+            xMin: pointList[0].x,
+            xMax: pointList[pointList.length - 1].x,
+            message: "Divide current sub-point set into left part and right part.",
         }];
         let result = mergeSubHull(leftPart, rightPart, process)
         return {

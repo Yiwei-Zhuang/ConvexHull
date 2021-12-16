@@ -13,6 +13,7 @@ import algoTools from "../algorithm/AlgoTools";
 const primary = "#00d1b2";
 const link = "#3273dc";
 const complete = "#ee9a33";
+const danger = "#ff3860";
 
 export default {
   name: "PaperCanvas",
@@ -31,6 +32,7 @@ export default {
     convexHullPath: null,
     displayPath: null,
     displayPointList: [],
+    searchAreaPath: null,
     states: [],
     step: -1,
     type2Counter: 0,
@@ -105,7 +107,7 @@ export default {
     },
     reset() {
       for (const [, value] of Object.entries(this.pointPathMap)) {
-        value.remove();
+        value.removeSegments();
       }
       this.pointPathMap = {};
       this.points = [];
@@ -138,6 +140,10 @@ export default {
       if (this.type5RightPath != null) {
         this.type5RightPath.removeSegments();
         this.type5RightPath = null;
+      }
+      if (this.searchAreaPath != null) {
+        this.searchAreaPath.removeSegments();
+        this.searchAreaPath = null;
       }
     },
     p2c(p) {
@@ -176,8 +182,59 @@ export default {
         }
       }
     },
+    displaySearchArea(xMin, xMax) {
+      this.searchAreaPath = new paper.Path({
+        strokeColor: danger,
+        strokeWidth: 3,
+      });
+      this.searchAreaPath.add({x: xMin, y: 0});
+      this.searchAreaPath.add({x: xMin, y: this.GLOBAL_CANVAS_HEIGHT});
+      this.searchAreaPath.add({x: xMax, y: this.GLOBAL_CANVAS_HEIGHT});
+      this.searchAreaPath.add({x: xMax, y: 0});
+      this.searchAreaPath.add({x: xMin, y: 0});
+    },
     sendMessage(msg) {
       this.$emit("message", msg);
+    },
+    randomGeneratePoints(pointsNum, xMin, xMax, yMin, yMax) {
+      // X and Y coordinates are without repetitions.
+      if (this.addPoints) {
+        let xArray = [];
+        let yArray = [];
+        if (xMax > this.GLOBAL_CANVAS_WIDTH) {
+          xMax = this.GLOBAL_CANVAS_WIDTH;
+        }
+        if (yMax > this.GLOBAL_CANVAS_HEIGHT) {
+          yMax = this.GLOBAL_CANVAS_HEIGHT;
+        }
+        for (let i = xMin; i < this.GLOBAL_CANVAS_WIDTH; i++) {
+          xArray.push(i);
+        }
+        for (let i = yMin; i < this.GLOBAL_CANVAS_HEIGHT; i++) {
+          yArray.push(i);
+        }
+        for (let i = 0; i < this.points.length; i++) {
+          let xIndex = xArray.indexOf(this.points[i].x);
+          let yIndex = yArray.indexOf(this.points[i].y);
+          if (xIndex !== -1) {
+            xArray.splice(xIndex, 1);
+          }
+          if (yIndex !== -1) {
+            yArray.splice(yIndex, 1);
+          }
+        }
+        for (let i = 0; i < pointsNum; i++) {
+          let tempXIndex = this.getRandomArbitrary(0, xArray.length - 1);
+          let tempYIndex = this.getRandomArbitrary(0, yArray.length - 1);
+          let tempX = xArray[tempXIndex];
+          let tempY = xArray[tempYIndex];
+          xArray.splice(tempXIndex, 1);
+          yArray.splice(tempYIndex, 1);
+          let key = tempX + "," + tempY;
+          this.points.push({x: tempX, y: tempY});
+          this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
+        }
+      }
     },
     pointNum() {
       return this.points.length;
@@ -277,6 +334,7 @@ export default {
         for (let j = 0; j < right.length; j++) {
           this.getPointPath(right[j]).fillColor = rightColor;
         }
+        this.displaySearchArea(state.xMin, state.xMax);
       } else if (state.type === 2) {
         // Brutal force compute convex hull
         let color = primary;
@@ -288,8 +346,9 @@ export default {
           this.getPointPath(state.points[j]).fillColor = color;
         }
         this.displayPath.add(this.p2c(state.points[0]));
+        this.displaySearchArea(state.xMin, state.xMax);
       } else if (state.type === 3) {
-        // Conquer
+        // Merge
         let left = state.left;
         let right = state.right;
         let leftColor = primary;
@@ -310,6 +369,7 @@ export default {
           this.type5RightPath.add(this.p2c(right[j]));
         }
         this.type5RightPath.add(this.p2c(right[0]));
+        this.displaySearchArea(state.xMin, state.xMax);
       } else if (state.type === 4) {
         // Find and connect tangent line
         for (let j = 0; j < state.points.length; j++) {
@@ -317,7 +377,9 @@ export default {
           this.getPointPath(state.points[j]).fillColor = complete;
         }
         this.displayPath.add(this.p2c(state.points[0]));
+        this.displaySearchArea(state.xMin, state.xMax);
       }
+      this.sendMessage(state.message);
       return state.type;
     },
     type5NextState() {
@@ -519,18 +581,25 @@ export default {
       let yList = [];
       this.tool.onMouseDown = (event) => {
         if (this.addPoints) {
+          if (this.pointNum() > 200) {
+            this.sendMessage("Max point number has been set to 200.");
+            return;
+          }
           let clickPoint = this.p2c(event.point);
           clickPoint.x = Math.floor(clickPoint.x);
           clickPoint.y = Math.floor(clickPoint.y);
-          if (!xList.includes(clickPoint.x) && !yList.includes(clickPoint.y)) {
-            this.points.push({x: clickPoint.x, y: clickPoint.y});
-            this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
-              x: clickPoint.x,
-              y: clickPoint.y
-            }), 10);
-            xList.push(clickPoint.x);
-            yList.push(clickPoint.y);
+          for (let i = 0; i < this.points.length; i++) {
+            if (this.points[i].x === clickPoint.x || this.points[i].y === clickPoint.y) {
+              return;
+            }
           }
+          this.points.push({x: clickPoint.x, y: clickPoint.y});
+          this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
+            x: clickPoint.x,
+            y: clickPoint.y
+          }), 10);
+          xList.push(clickPoint.x);
+          yList.push(clickPoint.y);
         }
       }
     }

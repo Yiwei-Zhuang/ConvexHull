@@ -27,9 +27,12 @@
           </div>
         </div>
         <div class="tile is-child">
+          <button class="button" @click.left="AddPoints" :disabled="lock"><strong> Add 10 </strong></button>
           <button class="button" @click.left="reset" :disabled="lock"><strong> Reset </strong></button>
           <button class="button" @click.left="last" :disabled="lock"><strong> Last </strong></button>
           <button class="button" @click.left="next" :disabled="lock"><strong> Next </strong></button>
+          <button v-if="clickAuto" class="button is-primary" @click.left="auto"><strong> Auto </strong></button>
+          <button v-else class="button" @click.left="auto"><strong> Auto </strong></button>
         </div>
       </div>
     </div>
@@ -43,7 +46,16 @@
             <button class="delete" aria-label="close" @click.left="closePreface"></button>
           </header>
           <section class="modal-card-body">
-            <p class="content"> determine the convex hull in <strong>O(nlogn)</strong>.</p>
+            <p class="content"> With the idea of pre-sort the point set, there is another algorithm called Merge Hull
+              which also can determine the convex hull in <strong>O(nlogn)</strong> by divide and conquer the point set.
+            Merge Hull algorithm divides the point set into left and right part and each part will be divided again till
+            there is only few points left in the part such as 4 or 5 points. Since there is only few point, we can use
+            brutal force to compute the little convex hull in constant time. For the conquer part, the algorithm will pick left and right
+            parts that have already got convex hulls and try to connect two parts with upper and lower tangent lines.
+            One way to find such tangent lines is starting with right most point on left convex hull and left most point
+            on right convex hull and check points in CCW direction. Then, with the property of "left turn" in convex hull, we are going to make sure the
+            connection of left and right convex hull is always turning left. After we merge all partial convex hulls,
+            the final result is exactly the convex hull for the whole point set.</p>
           </section>
         </div>
       </div>
@@ -64,6 +76,8 @@ export default {
       preface: true,
       lock: false,
       currentIndex: -1,
+      clickAuto: false,
+      autoing: false,
       text: [
         {
           msg: "Sorting points by their X coordinate ascending",
@@ -94,7 +108,6 @@ export default {
       let index = this.$refs.pc.type5LastState();
       if (index !== null) {
         this.currentIndex = index;
-
       } else {
         this.currentIndex = 0;
         await this.$refs.pc.show(this.currentIndex);
@@ -104,6 +117,9 @@ export default {
       }
     },
     async next() {
+      if (this.$refs.pc.pointNum() <= 3) {
+        return false;
+      }
       if (this.currentIndex === -1) {
         this.currentIndex++;
         for (let i = 0; i < this.text.length; i++) {
@@ -117,8 +133,11 @@ export default {
           for (let i = 0; i < this.text.length; i++) {
             this.text[i].highLight = i === this.currentIndex;
           }
+        } else {
+          return false;
         }
       }
+      return true;
     },
     async reset() {
       this.currentIndex = -1;
@@ -127,6 +146,27 @@ export default {
       }
       this.msg = "Please add more than three points on our canvas first.";
       await this.$refs.pc.reset();
+      this.lock = false;
+      this.clickAuto = false;
+    },
+    AddPoints() {
+      if(this.$refs.pc.pointNum() > 200) {
+        this.msg = "Max point number has been set to 200."
+        return;
+      }
+      this.$refs.pc.randomGeneratePoints(10, 0, 800, 0, 600);
+      this.msg = "Randomly add 10 points on canvas and all points have different x and y coordinates."
+    },
+    async auto() {
+      this.autoing = !this.autoing;
+      if (this.autoing) {
+        this.clickAuto = true;
+        while (await this.next() && this.autoing) {
+          await new Promise(r => setTimeout(r, 100));
+        }
+        this.clickAuto = false;
+        this.autoing = false;
+      }
     },
     getMessage(msg) {
       this.msg = msg;
