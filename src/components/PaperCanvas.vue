@@ -7,13 +7,12 @@
 <script>
 const paper = require("paper");
 import grahamScan from "../algorithm/GrahamScan";
-import mergeHull from "../algorithm/MergeHull";
 import algoTools from "../algorithm/AlgoTools";
 
-const primary = "#00d1b2";
-const link = "#3273dc";
+// const primary = "#00d1b2";
+// const link = "#3273dc";
 const complete = "#ee9a33";
-const danger = "#ff3860";
+// const danger = "#ff3860";
 
 export default {
   name: "PaperCanvas",
@@ -39,8 +38,6 @@ export default {
     type3LowestPoint: null,
     type3TangentLines: [],
     type4PointIndex: 0,
-    type5LeftPath: null,
-    type5RightPath: null,
   }),
   created() {
 
@@ -60,8 +57,6 @@ export default {
       this.initType3();
     } else if (this.type === 4) {
       this.initType4();
-    } else if (this.type === 5) {
-      this.initType5();
     } else {
       alert("E-Doz");
     }
@@ -182,59 +177,8 @@ export default {
         }
       }
     },
-    displaySearchArea(xMin, xMax) {
-      this.searchAreaPath = new paper.Path({
-        strokeColor: danger,
-        strokeWidth: 3,
-      });
-      this.searchAreaPath.add({x: xMin, y: 0});
-      this.searchAreaPath.add({x: xMin, y: this.GLOBAL_CANVAS_HEIGHT});
-      this.searchAreaPath.add({x: xMax, y: this.GLOBAL_CANVAS_HEIGHT});
-      this.searchAreaPath.add({x: xMax, y: 0});
-      this.searchAreaPath.add({x: xMin, y: 0});
-    },
     sendMessage(msg) {
       this.$emit("message", msg);
-    },
-    randomGeneratePoints(pointsNum, xMin, xMax, yMin, yMax) {
-      // X and Y coordinates are without repetitions.
-      if (this.addPoints) {
-        let xArray = [];
-        let yArray = [];
-        if (xMax > this.GLOBAL_CANVAS_WIDTH) {
-          xMax = this.GLOBAL_CANVAS_WIDTH;
-        }
-        if (yMax > this.GLOBAL_CANVAS_HEIGHT) {
-          yMax = this.GLOBAL_CANVAS_HEIGHT;
-        }
-        for (let i = xMin; i < this.GLOBAL_CANVAS_WIDTH; i++) {
-          xArray.push(i);
-        }
-        for (let i = yMin; i < this.GLOBAL_CANVAS_HEIGHT; i++) {
-          yArray.push(i);
-        }
-        for (let i = 0; i < this.points.length; i++) {
-          let xIndex = xArray.indexOf(this.points[i].x);
-          let yIndex = yArray.indexOf(this.points[i].y);
-          if (xIndex !== -1) {
-            xArray.splice(xIndex, 1);
-          }
-          if (yIndex !== -1) {
-            yArray.splice(yIndex, 1);
-          }
-        }
-        for (let i = 0; i < pointsNum; i++) {
-          let tempXIndex = this.getRandomArbitrary(0, xArray.length - 1);
-          let tempYIndex = this.getRandomArbitrary(0, yArray.length - 1);
-          let tempX = xArray[tempXIndex];
-          let tempY = xArray[tempYIndex];
-          xArray.splice(tempXIndex, 1);
-          yArray.splice(tempYIndex, 1);
-          let key = tempX + "," + tempY;
-          this.points.push({x: tempX, y: tempY});
-          this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
-        }
-      }
     },
     pointNum() {
       return this.points.length;
@@ -315,85 +259,6 @@ export default {
       if (this.step - 1 >= 0) {
         this.step--;
         return this.readState(this.step);
-      } else {
-        return null;
-      }
-    },
-    type5ReadState() {
-      this.resetDisplay();
-      let state = this.states[this.step];
-      if (state.type === 1) {
-        // Divide
-        let left = state.left;
-        let right = state.right;
-        let leftColor = primary;
-        let rightColor = link;
-        for (let j = 0; j < left.length; j++) {
-          this.getPointPath(left[j]).fillColor = leftColor;
-        }
-        for (let j = 0; j < right.length; j++) {
-          this.getPointPath(right[j]).fillColor = rightColor;
-        }
-        this.displaySearchArea(state.xMin, state.xMax);
-      } else if (state.type === 2) {
-        // Brutal force compute convex hull
-        let color = primary;
-        if (state.part === 1) {
-          color = link;
-        }
-        for (let j = 0; j < state.points.length; j++) {
-          this.displayPath.add(this.p2c(state.points[j]));
-          this.getPointPath(state.points[j]).fillColor = color;
-        }
-        this.displayPath.add(this.p2c(state.points[0]));
-        this.displaySearchArea(state.xMin, state.xMax);
-      } else if (state.type === 3) {
-        // Merge
-        let left = state.left;
-        let right = state.right;
-        let leftColor = primary;
-        let rightColor = link;
-        this.type5LeftPath = new paper.Path({
-          strokeColor: "#000000",
-        });
-        this.type5RightPath = new paper.Path({
-          strokeColor: "#000000",
-        });
-        for (let j = 0; j < left.length; j++) {
-          this.getPointPath(left[j]).fillColor = leftColor;
-          this.type5LeftPath.add(this.p2c(left[j]));
-        }
-        this.type5LeftPath.add(this.p2c(left[0]));
-        for (let j = 0; j < right.length; j++) {
-          this.getPointPath(right[j]).fillColor = rightColor;
-          this.type5RightPath.add(this.p2c(right[j]));
-        }
-        this.type5RightPath.add(this.p2c(right[0]));
-        this.displaySearchArea(state.xMin, state.xMax);
-      } else if (state.type === 4) {
-        // Find and connect tangent line
-        for (let j = 0; j < state.points.length; j++) {
-          this.displayPath.add(this.p2c(state.points[j]));
-          this.getPointPath(state.points[j]).fillColor = complete;
-        }
-        this.displayPath.add(this.p2c(state.points[0]));
-        this.displaySearchArea(state.xMin, state.xMax);
-      }
-      this.sendMessage(state.message);
-      return state.type;
-    },
-    type5NextState() {
-      if (this.step + 1 < this.states.length) {
-        this.step++;
-        return this.type5ReadState();
-      } else {
-        return null;
-      }
-    },
-    type5LastState() {
-      if (this.step - 1 >= 0) {
-        this.step--;
-        return this.type5ReadState();
       } else {
         return null;
       }
@@ -572,34 +437,6 @@ export default {
             xList.push(clickPoint.x);
             yList.push(clickPoint.y);
           }
-        }
-      }
-    }
-    ,
-    initType5() {
-      let xList = [];
-      let yList = [];
-      this.tool.onMouseDown = (event) => {
-        if (this.addPoints) {
-          if (this.pointNum() > 200) {
-            this.sendMessage("Max point number has been set to 200.");
-            return;
-          }
-          let clickPoint = this.p2c(event.point);
-          clickPoint.x = Math.floor(clickPoint.x);
-          clickPoint.y = Math.floor(clickPoint.y);
-          for (let i = 0; i < this.points.length; i++) {
-            if (this.points[i].x === clickPoint.x || this.points[i].y === clickPoint.y) {
-              return;
-            }
-          }
-          this.points.push({x: clickPoint.x, y: clickPoint.y});
-          this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
-            x: clickPoint.x,
-            y: clickPoint.y
-          }), 10);
-          xList.push(clickPoint.x);
-          yList.push(clickPoint.y);
         }
       }
     }
@@ -824,38 +661,6 @@ export default {
           this.sendMessage(message);
           this.saveState(index, message);
         }
-      } else if (this.type === 5) {
-        let message = "";
-        this.addPoints = false;
-        if (this.convexHullList.length < 3) {
-          let mergeHullResult = mergeHull.exec(this.points);
-          this.states = mergeHullResult.process;
-          this.convexHullList = mergeHullResult.result;
-        }
-        if (index === 0) {
-          this.resetDisplay();
-          message = "Point color becomes darker as its x coordinate increasing.";
-          let pointList = this.points.slice();
-          pointList.sort(function (p1, p2) {
-            let x1 = p1.x
-            let x2 = p2.x;
-            if (x1 === x2) {
-              p2.x += 0.00001; // Impossible!
-            }
-            if (x1 < x2) {
-              return -1;
-            }
-            if (x1 > x2) {
-              return 1;
-            }
-          });
-          this.sortedPoints = pointList.slice();
-          for (let i = 0; i < pointList.length; i++) {
-            let circle = this.pointPathMap[pointList[i].x + "," + pointList[i].y];
-            circle.opacity = (1 - (pointList.length - i) / pointList.length) / 2 + 0.3;
-          }
-        }
-        this.sendMessage(message);
       }
       this.$emit("unlock");
     }

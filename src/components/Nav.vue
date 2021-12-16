@@ -46,7 +46,7 @@ export default {
   name: 'Nav',
   data() {
     return {
-      pathList: ["/", "/wheel", "/gift-wrapping", "/graham-scan"],
+      pathList: ["/", "/wheel", "/gift-wrapping", "/graham-scan", "/merge-hull"],
     }
   },
   created() {
