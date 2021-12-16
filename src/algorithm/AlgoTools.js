@@ -42,6 +42,18 @@ export default {
         }
         return null;
     },
+    getNextPoint(point, pointList) {
+        for (let i = 0; i < pointList.length; i++) {
+            if (point.x === pointList[i].x && point.y === pointList[i].y) {
+                i = i + 1;
+                if (i === pointList.length) {
+                    return {x: pointList[0].x, y: pointList[0].y};
+                } else {
+                    return {x: pointList[i].x, y: pointList[i].y};
+                }
+            }
+        }
+    },
     getRandomArbitrary(min, max) {
         return Math.floor(Math.random() * (max - min)) + min;
     },

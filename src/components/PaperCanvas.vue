@@ -49,9 +49,7 @@ export default {
     this.displayPath = new paper.Path({
       strokeColor: "#000000",
     });
-    if (this.type === 1) {
-      this.initType1();
-    } else if (this.type === 2) {
+    if (this.type === 2) {
       this.initType2();
     } else if (this.type === 3) {
       this.initType3();
@@ -263,54 +261,6 @@ export default {
         return null;
       }
     },
-    initType1() {
-      let fourCornerPoint = [{x: 400, y: 590}, {x: 401, y: 10}, {x: 10, y: 300}, {x: 790, y: 300}];
-      this.points.push.apply(this.points, fourCornerPoint);
-      for (let i = 0; i < this.points.length; i++) {
-        let point = this.points[i];
-        this.pointPathMap[point.x + "," + point.y] = this.drawPoint(this.scope, this.p2c(point), 10);
-      }
-      let xList = [400, 401, 10, 790];
-      for (let i = 0; i < 50; i++) {
-        let tempX = this.getRandomArbitrary(250, 550);
-        let tempY = this.getRandomArbitrary(150, 450);
-        let key = tempX + "," + tempY;
-        if (xList.includes(tempX) || key in this.pointPathMap) {
-          i--;
-        } else {
-          xList.push(tempX);
-          this.points.push({x: tempX, y: tempY});
-          this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
-        }
-      }
-      this.tool.onMouseDown = (event) => {
-        let clickPoint = this.p2c(event.point);
-        let nearestPoint = this.getNearestPoint(clickPoint, this.points);
-        if (nearestPoint) {
-          let flag = false;
-          for (let i = 0; i < fourCornerPoint.length; i++) {
-            if (nearestPoint.x === fourCornerPoint[i].x && nearestPoint.y === fourCornerPoint[i].y) {
-              flag = true;
-              break;
-            }
-          }
-          if (flag) {
-            this.sendMessage("Great! Indeed, those 4 points are on a convex hull which includes all other points.");
-          } else {
-            this.sendMessage("What about these 4 points? It looks like they are on a convex hull which includes all other points.");
-          }
-          let convexHull = grahamScan.exec(this.points);
-          for (let i = 0; i < convexHull.length; i++) {
-            let point = convexHull[i];
-            let circle = this.pointPathMap[point.x + "," + point.y];
-            circle.fillColor = complete;
-          }
-          let path = new paper.Path();
-          this.drawPolygon(path, convexHull);
-        }
-      }
-    }
-    ,
     initType2() {
       let centerX = 400;
       let centerY = 300;

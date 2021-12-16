@@ -1,18 +1,18 @@
 <template>
   <div>
     <Nav ref="nav"/>
-    <h1 class="title">{{ msg }}</h1>
-    <PaperCanvas :type="1" :canvasId="'canvas-one'" ref="pc" @message="getMessage"/>
+    <h1 class="subtitle">{{ msg }}</h1>
+    <HelloCanvas :canvasId="'canvas-one'" ref="c" @message="getMessage"/>
   </div>
 </template>
 
 <script>
-import PaperCanvas from "../components/PaperCanvas";
+import HelloCanvas from "../components/HelloCanvas";
 import Nav from "../components/Nav";
 
 export default {
   name: 'HelloWorld',
-  components: {PaperCanvas, Nav},
+  components: {HelloCanvas, Nav},
   data() {
     return {
       msg: "Intuitively, Which points must be on convex hull?"

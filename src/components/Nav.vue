@@ -18,20 +18,20 @@
     <!--    </div>-->
     <div id="navbar" class="navbar-menu">
       <div class="navbar-start">
-        <router-link to="/" class="navbar-item">Hello</router-link>
-        <router-link to="/wheel" class="navbar-item">Wheel</router-link>
-        <router-link to="/gift-wrapping" class="navbar-item">Gift-Wrapping</router-link>
-        <router-link to="/graham-scan" class="navbar-item">Graham-Scan</router-link>
-        <router-link to="/merge-hull" class="navbar-item">Merge-Hull</router-link>
+        <router-link to="/" class="navbar-item" :disabled="lock">Hello</router-link>
+        <router-link to="/wheel" class="navbar-item" :disabled="lock">Wheel</router-link>
+        <router-link to="/gift-wrapping" class="navbar-item" :disabled="lock">Gift-Wrapping</router-link>
+        <router-link to="/graham-scan" class="navbar-item" :disabled="lock">Graham-Scan</router-link>
+        <router-link to="/merge-hull" class="navbar-item" :disabled="lock">Merge-Hull</router-link>
         <!--        <a v-if="backRoomBtn" class="navbar-item" @click.left="backToRoom"> Back</a>-->
       </div>
       <div class="navbar-end">
         <div class="navbar-item">
           <div class="buttons">
-            <button class="button is-primary" @click.left="previous">
+            <button class="button is-primary" @click.left="previous" :disabled="lock">
               Previous
             </button>
-            <button class="button is-primary" @click.left="next">
+            <button class="button is-primary" @click.left="next" :disabled="lock">
               Next
             </button>
           </div>
@@ -47,6 +47,7 @@ export default {
   data() {
     return {
       pathList: ["/", "/wheel", "/gift-wrapping", "/graham-scan", "/merge-hull"],
+      lock: false,
     }
   },
   created() {

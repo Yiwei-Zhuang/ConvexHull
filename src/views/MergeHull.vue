@@ -158,14 +158,20 @@ export default {
         this.msg = "Max point number has been set to 200."
         return;
       }
-      this.$refs.c.randomGeneratePoints(10, 0, 800, 0, 600);
-      this.msg = "Randomly add 10 points on canvas and all points have different x and y coordinates."
+      if (this.$refs.c.randomGeneratePoints(10, 0, 800, 0, 600)) {
+        this.msg = "Randomly add 10 points on canvas and all points have different x and y coordinates."
+      }
     },
     async auto() {
       this.autoing = !this.autoing;
       if (this.autoing) {
         this.clickAuto = true;
-        while (await this.next() && this.autoing) {
+        while (this.autoing) {
+          try {
+            await this.next()
+          } catch (e) {
+            break;
+          }
           await new Promise(r => setTimeout(r, 100));
         }
         this.clickAuto = false;

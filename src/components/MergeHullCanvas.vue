@@ -62,8 +62,6 @@ export default {
       return path;
     },
     init() {
-      let xList = [];
-      let yList = [];
       this.tool.onMouseDown = (event) => {
         if (this.addPoints) {
           if (this.pointNum() > 200) {
@@ -83,8 +81,6 @@ export default {
             x: clickPoint.x,
             y: clickPoint.y
           }), 10);
-          xList.push(clickPoint.x);
-          yList.push(clickPoint.y);
         }
       }
     },
@@ -157,10 +153,10 @@ export default {
         if (yMax > this.GLOBAL_CANVAS_HEIGHT) {
           yMax = this.GLOBAL_CANVAS_HEIGHT;
         }
-        for (let i = xMin; i < this.GLOBAL_CANVAS_WIDTH; i++) {
+        for (let i = xMin; i < xMax; i++) {
           xArray.push(i);
         }
-        for (let i = yMin; i < this.GLOBAL_CANVAS_HEIGHT; i++) {
+        for (let i = yMin; i < yMax; i++) {
           yArray.push(i);
         }
         for (let i = 0; i < this.points.length; i++) {
@@ -177,13 +173,16 @@ export default {
           let tempXIndex = algoTools.getRandomArbitrary(0, xArray.length - 1);
           let tempYIndex = algoTools.getRandomArbitrary(0, yArray.length - 1);
           let tempX = xArray[tempXIndex];
-          let tempY = xArray[tempYIndex];
+          let tempY = yArray[tempYIndex];
           xArray.splice(tempXIndex, 1);
           yArray.splice(tempYIndex, 1);
           let key = tempX + "," + tempY;
           this.points.push({x: tempX, y: tempY});
           this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
         }
+        return true;
+      } else {
+        return false;
       }
     },
     pointNum() {
