@@ -169,7 +169,9 @@ export default {
         this.clickAuto = true;
         while (this.autoing) {
           try {
-            await this.next()
+            if(!await this.next()) {
+              break;
+            }
           } catch (e) {
             break;
           }
