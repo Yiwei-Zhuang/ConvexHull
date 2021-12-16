@@ -298,7 +298,7 @@ export default {
         circle.opacity = (1 - (pointList.length - i) / pointList.length) / 2 + 0.3;
       }
       this.sendMessage("Point color becomes darker as its x coordinate increasing.");
-    }
+    },
   },
 }
 </script>

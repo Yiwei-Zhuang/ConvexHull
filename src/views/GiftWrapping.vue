@@ -1,12 +1,12 @@
 <template>
   <div>
     <Nav ref="nav"/>
-    <h1 class="title">{{ msg }}</h1>
+    <h1 class="subtitle">{{ msg }}</h1>
     <div class="tile is-ancestor">
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
-          <PaperCanvas :type="3" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
-                       @unlock="lock=false"/>
+          <GiftWrappingCanvas :canvasId="'canvas-one'" ref="c" @message="getMessage" @lock="lock=true"
+                              @unlock="lock=false"/>
         </div>
       </div>
       <div class="tile is-vertical is-parent">
@@ -27,6 +27,7 @@
           </div>
         </div>
         <div class="tile is-child">
+          <button class="button" @click.left="reset" :disabled="lock"><strong> Reset </strong></button>
           <button class="button" @click.left="last" :disabled="lock"><strong> Last </strong></button>
           <button class="button" @click.left="next" :disabled="lock"><strong> Next </strong></button>
         </div>
@@ -38,17 +39,16 @@
         <div class="modal-background"></div>
         <div class="modal-card" style="max-width: 500px">
           <header class="modal-card-head">
-            <p class="modal-card-title">Remember</p>
+            <p class="modal-card-title">Explanation</p>
             <button class="delete" aria-label="close" @click.left="closePreface"></button>
           </header>
           <section class="modal-card-body">
             <p class="content">Remember in first section, we observe some points will definitely be on the convex hull
-              such as left,right,top,bottom-most points. In second section. ************************** *****************
-              ************************************ ***************** ********************************** ***************
-              *******************. Thus, we can start from a point that must be on the convex hull. Crossing that point,
-              drawing a line that will not go through the convex hull of the point set. Rotating the line and stopping
-              when it meets with another point. Gift-Wrapping could use this basic idea building a convex hull in
-              <strong>O(n^2)</strong>.</p>
+              such as left,right,top,bottom-most points. In second section. We observe that rotating "tangent lines" may
+              be helpful for us to find convex hull. Gift-Wrapping is the very algorithm use this basic idea which can
+              build a convex hull in <strong>O(n^2)</strong>. This algorithm starts from the bottom point and draws a
+              horizontal line which could not go through the convex hull of the point set. Rotate the line CCW and
+              stop when it meets with another point. Repeat this process till we go back the bottom point.</p>
           </section>
         </div>
       </div>
@@ -58,38 +58,27 @@
 
 <script>
 import Nav from "../components/Nav";
-import PaperCanvas from "../components/PaperCanvas";
+import GiftWrappingCanvas from "../components/GiftWrappingCanvas";
 
 export default {
-  components: {Nav, PaperCanvas},
+  components: {Nav, GiftWrappingCanvas},
   name: "GiftWrapping",
   data() {
     return {
-      msg: "Let's pick the bottom point first.",
+      msg: "Please add more than three points on our canvas first.",
       preface: true,
       lock: false,
-      currentIndex: 0,
+      currentIndex: -1,
+      clickAuto: false,
       text: [
         {
           msg: "Find lowest point",
-          highLight: true,
-        },
-        {
-          msg: "Draw a horizontal line cross the lowest point",
           highLight: false,
         },
         {
-          msg: "Rotating the horizontal line in CCW direction and stop when it intersects with another point",
+          msg: "Rotate last tangent line CCW",
           highLight: false,
         },
-        {
-          msg: "Repeatedly find bounding lines",
-          highLight: false,
-        },
-        {
-          msg: "Clean up",
-          highLight: false,
-        }
       ],
     }
   },
@@ -101,34 +90,52 @@ export default {
       this.msg = msg;
     },
     async next() {
-      if (!this.lock && this.currentIndex < this.text.length - 1) {
-        this.currentIndex += 1;
-        for (let i = 0; i < this.text.length; i++) {
-          if (i === this.currentIndex) {
-            this.text[i].highLight = true;
-          } else {
-            this.text[i].highLight = false;
-          }
-        }
-        await this.$refs.pc.show(this.currentIndex);
+      this.lock = true;
+      if (this.$refs.c.pointNum() <= 3) {
+        this.lock = false;
+        return false;
       }
+      if (this.currentIndex === -1) {
+        this.currentIndex++;
+        for (let i = 0; i < this.text.length; i++) {
+          this.text[i].highLight = i === this.currentIndex;
+        }
+        this.$refs.c.prepare();
+      } else {
+        for (let i = 0; i < this.text.length; i++) {
+          this.text[i].highLight = i === 1;
+        }
+        await this.$refs.c.nextState();
+      }
+      this.lock = false;
+      return true;
     },
     async last() {
-      if (!this.lock && this.currentIndex > 0) {
-        this.currentIndex -= 1;
-        for (let i = 0; i < this.text.length; i++) {
-          if (i === this.currentIndex) {
-            this.text[i].highLight = true;
-          } else {
-            this.text[i].highLight = false;
-          }
-        }
-        await this.$refs.pc.show(this.currentIndex);
+      this.lock = true;
+      let index = await this.$refs.c.lastState();
+      if (index !== null) {
+        this.currentIndex = 1;
+      } else {
+        this.currentIndex = 0;
+        await this.$refs.c.prepare();
       }
+      for (let i = 0; i < this.text.length; i++) {
+        this.text[i].highLight = i === this.currentIndex;
+      }
+      this.lock = false;
     },
-    async closePreface() {
+    closePreface() {
       this.preface = false;
-      await this.$refs.pc.show(this.currentIndex);
+    },
+    async reset() {
+      this.currentIndex = -1;
+      for (let i = 0; i < this.text.length; i++) {
+        this.text[i].highLight = false;
+      }
+      this.msg = "Please add more than three points on our canvas first.";
+      await this.$refs.c.reset();
+      this.lock = false;
+      this.clickAuto = false;
     },
   },
 }
