@@ -34,8 +34,6 @@ export default {
     searchAreaPath: null,
     states: [],
     step: -1,
-    type3LowestPoint: null,
-    type3TangentLines: [],
     type4PointIndex: 0,
   }),
   created() {
@@ -81,6 +79,7 @@ export default {
       this.resetDisplay();
       this.states = [];
       this.step = -1;
+      this.type4PointIndex = 0;
     },
     resetDisplay() {
       for (let i = 0; i < this.points.length; i++) {
@@ -112,6 +111,49 @@ export default {
     sendMessage(msg) {
       this.$emit("message", msg);
     },
+    randomGeneratePoints(pointsNum, xMin, xMax, yMin, yMax) {
+      // X and Y coordinates are without repetitions.
+      if (this.addPoints) {
+        let xArray = [];
+        let yArray = [];
+        if (xMax > this.GLOBAL_CANVAS_WIDTH) {
+          xMax = this.GLOBAL_CANVAS_WIDTH;
+        }
+        if (yMax > this.GLOBAL_CANVAS_HEIGHT) {
+          yMax = this.GLOBAL_CANVAS_HEIGHT;
+        }
+        for (let i = xMin; i < xMax; i++) {
+          xArray.push(i);
+        }
+        for (let i = yMin; i < yMax; i++) {
+          yArray.push(i);
+        }
+        for (let i = 0; i < this.points.length; i++) {
+          let xIndex = xArray.indexOf(this.points[i].x);
+          let yIndex = yArray.indexOf(this.points[i].y);
+          if (xIndex !== -1) {
+            xArray.splice(xIndex, 1);
+          }
+          if (yIndex !== -1) {
+            yArray.splice(yIndex, 1);
+          }
+        }
+        for (let i = 0; i < pointsNum; i++) {
+          let tempXIndex = algoTools.getRandomArbitrary(0, xArray.length - 1);
+          let tempYIndex = algoTools.getRandomArbitrary(0, yArray.length - 1);
+          let tempX = xArray[tempXIndex];
+          let tempY = yArray[tempYIndex];
+          xArray.splice(tempXIndex, 1);
+          yArray.splice(tempYIndex, 1);
+          let key = tempX + "," + tempY;
+          this.points.push({x: tempX, y: tempY});
+          this.pointPathMap[key] = this.drawPoint(this.scope, this.p2c({x: tempX, y: tempY}), 10);
+        }
+        return true;
+      } else {
+        return false;
+      }
+    },
     pointNum() {
       return this.points.length;
     },
@@ -129,17 +171,6 @@ export default {
     },
     endOfCheck() {
       return this.sortedPoints.length > 0 && this.type4PointIndex >= this.sortedPoints.length;
-    },
-    printStates() {
-      for (let i = 0; i < this.states.length; i++) {
-        let state = this.states[i];
-        console.log({
-          color: state.pointsColor,
-          index: state.index,
-          type4PointIndex: state.type4PointIndex,
-          displayPathPoints: state.displayPathPoints,
-        });
-      }
     },
     saveState(index, message) {
       let pointsColor = [];
@@ -197,22 +228,25 @@ export default {
     }
     ,
     initType4() {
-      let xList = [];
-      let yList = [];
       this.tool.onMouseDown = (event) => {
         if (this.addPoints) {
+          if (this.pointNum() > 200) {
+            this.sendMessage("Max point number has been set to 200.");
+            return;
+          }
           let clickPoint = this.p2c(event.point);
           clickPoint.x = Math.floor(clickPoint.x);
           clickPoint.y = Math.floor(clickPoint.y);
-          if (!xList.includes(clickPoint.x) && !yList.includes(clickPoint.y)) {
-            this.points.push({x: clickPoint.x, y: clickPoint.y});
-            this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
-              x: clickPoint.x,
-              y: clickPoint.y
-            }), 10);
-            xList.push(clickPoint.x);
-            yList.push(clickPoint.y);
+          for (let i = 0; i < this.points.length; i++) {
+            if (this.points[i].x === clickPoint.x || this.points[i].y === clickPoint.y) {
+              return;
+            }
           }
+          this.points.push({x: clickPoint.x, y: clickPoint.y});
+          this.pointPathMap[clickPoint.x + "," + clickPoint.y] = this.drawPoint(this.scope, this.p2c({
+            x: clickPoint.x,
+            y: clickPoint.y
+          }), 10);
         }
       }
     }

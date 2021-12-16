@@ -2,12 +2,12 @@ import algoTool from "./AlgoTools";
 import grahamScan from "./GrahamScan";
 
 let a = 1;
-let DIVIDE = 1;
-let BRUTAL = 2;
-let MERGE = 3;
-let CONNECT_TANGENT = 4;
-let LEFT = 0;
-let RIGHT = 1;
+const DIVIDE = 1;
+const BRUTAL = 2;
+const MERGE = 3;
+const CONNECT_TANGENT = 4;
+const LEFT = 0;
+const RIGHT = 1;
 
 function nextPointIndex(pl, index) {
     let retIndex = index + 1;

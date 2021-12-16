@@ -5,7 +5,7 @@
     <div class="tile is-ancestor">
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
-          <PaperCanvas :type="4" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
+          <PaperCanvas :type="4" :canvasId="'canvas-one'" ref="c" @message="getMessage" @lock="lock=true"
                        @unlock="lock=false" @goto="goto"/>
         </div>
       </div>
@@ -27,9 +27,12 @@
           </div>
         </div>
         <div class="tile is-child">
+          <button class="button" @click.left="addPoints" :disabled="lock"><strong> Add 10 </strong></button>
           <button class="button" @click.left="reset" :disabled="lock"><strong> Reset </strong></button>
           <button class="button" @click.left="last" :disabled="lock"><strong> Last </strong></button>
           <button class="button" @click.left="next" :disabled="lock"><strong> Next </strong></button>
+          <button v-if="clickAuto" class="button is-primary" @click.left="auto"><strong> Auto </strong></button>
+          <button v-else class="button" @click.left="auto"><strong> Auto </strong></button>
         </div>
       </div>
     </div>
@@ -68,6 +71,8 @@ export default {
       preface: true,
       lock: false,
       currentIndex: -1,
+      clickAuto: false,
+      autoing: false,
       text: [
         {
           msg: "Sorting points by their X coordinate ascending",
@@ -108,34 +113,44 @@ export default {
 
   },
   methods: {
+    addPoints() {
+      this.autoing = false;
+      if (this.$refs.c.pointNum() > 200) {
+        this.msg = "Max point number has been set to 200."
+        return;
+      }
+      if (this.$refs.c.randomGeneratePoints(10, 0, 800, 0, 600)) {
+        this.msg = "Randomly add 10 points on canvas and all points have different x and y coordinates."
+      }
+    },
     async last() {
       if (!this.lock && this.currentIndex > 0) {
-        this.currentIndex = this.$refs.pc.lastState();
+        this.currentIndex = this.$refs.c.lastState();
         for (let i = 0; i < this.text.length; i++) {
           this.text[i].highLight = i === this.currentIndex;
         }
       }
     },
     async next() {
-      if (!this.lock && this.$refs.pc.pointNum() > 3 && this.currentIndex < this.text.length - 1) {
-        let nextState = this.$refs.pc.nextState();
+      if (!this.lock && this.$refs.c.pointNum() > 3 && this.currentIndex < this.text.length - 1) {
+        let nextState = this.$refs.c.nextState();
         if (nextState !== null) {
           this.currentIndex = nextState;
         } else {
           if (this.currentIndex === 2) {
-            if (this.$refs.pc.endOfCheck()) {
+            if (this.$refs.c.endOfCheck()) {
               this.currentIndex = 6;
             } else {
               this.currentIndex = 3;
             }
           } else if (this.currentIndex === 3) {
-            if (this.$refs.pc.currentTurn() < 0) {
+            if (this.$refs.c.currentTurn() < 0) {
               this.currentIndex = 4;
             } else {
               this.currentIndex = 5;
             }
           } else if (this.currentIndex === 4) {
-            if (this.$refs.pc.endOfCheck()) {
+            if (this.$refs.c.endOfCheck()) {
               this.currentIndex = 6;
             } else {
               this.currentIndex = 2;
@@ -145,10 +160,39 @@ export default {
           } else {
             this.currentIndex += 1;
           }
-          await this.$refs.pc.show(this.currentIndex);
+          await this.$refs.c.show(this.currentIndex);
         }
         for (let i = 0; i < this.text.length; i++) {
           this.text[i].highLight = i === this.currentIndex;
+        }
+      }
+    },
+    async auto() {
+      let pointNum = this.$refs.c.pointNum();
+      let sleepPeriod = 100;
+      if(pointNum > 50) {
+        sleepPeriod = 30;
+      }else if(pointNum > 100) {
+        sleepPeriod = 5;
+      }
+      if (!this.lock && this.$refs.c.pointNum() > 3 && this.currentIndex < this.text.length - 1) {
+        this.autoing = !this.autoing;
+        if (this.autoing) {
+          this.clickAuto = true;
+          while (this.autoing) {
+            try {
+              await this.next();
+              if (this.$refs.c.endOfCheck()) {
+                break;
+              }
+            } catch (e) {
+              console.error(e);
+              break;
+            }
+            await new Promise(r => setTimeout(r, sleepPeriod));
+          }
+          this.clickAuto = false;
+          this.autoing = false;
         }
       }
     },
@@ -158,7 +202,7 @@ export default {
         this.text[i].highLight = false;
       }
       this.msg = "Please add more than three points on our canvas first.";
-      await this.$refs.pc.reset();
+      await this.$refs.c.reset();
     },
     getMessage(msg) {
       this.msg = msg;

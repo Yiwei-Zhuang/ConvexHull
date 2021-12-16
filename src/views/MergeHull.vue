@@ -27,7 +27,7 @@
           </div>
         </div>
         <div class="tile is-child">
-          <button class="button" @click.left="AddPoints" :disabled="lock"><strong> Add 10 </strong></button>
+          <button class="button" @click.left="addPoints" :disabled="lock"><strong> Add 10 </strong></button>
           <button class="button" @click.left="reset" :disabled="lock"><strong> Reset </strong></button>
           <button class="button" @click.left="last" :disabled="lock"><strong> Last </strong></button>
           <button class="button" @click.left="next" :disabled="lock"><strong> Next </strong></button>
@@ -153,7 +153,7 @@ export default {
       this.lock = false;
       this.clickAuto = false;
     },
-    AddPoints() {
+    addPoints() {
       this.autoing = false;
       if (this.$refs.c.pointNum() > 200) {
         this.msg = "Max point number has been set to 200."
@@ -164,18 +164,25 @@ export default {
       }
     },
     async auto() {
+      let pointNum = this.$refs.c.pointNum();
+      let sleepPeriod = 100;
+      if (pointNum > 50) {
+        sleepPeriod = 50;
+      } else if (pointNum > 100) {
+        sleepPeriod = 5;
+      }
       this.autoing = !this.autoing;
       if (this.autoing) {
         this.clickAuto = true;
         while (this.autoing) {
           try {
-            if(!await this.next()) {
+            if (!await this.next()) {
               break;
             }
           } catch (e) {
             break;
           }
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, sleepPeriod));
         }
         this.clickAuto = false;
         this.autoing = false;
