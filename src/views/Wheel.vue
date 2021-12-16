@@ -1,8 +1,8 @@
 <template>
   <div>
     <Nav ref="nav"/>
-    <h1 class="title">{{ msg }}</h1>
-    <WheelCanvas :type="2" :canvasId="'canvas-one'" ref="pc" @message="getMessage"/>
+    <h1 class="subtitle">{{ msg }}</h1>
+    <WheelCanvas :canvasId="'canvas-one'" ref="pc" @message="getMessage"/>
   </div>
 </template>
 
