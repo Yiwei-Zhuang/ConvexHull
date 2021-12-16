@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="tile is-vertical is-parent">
-        <div class="tile is-child box" style="min-height: 600px; height: 600px;">
+        <div class="tile is-child box" style="min-height: 500px; height: 500px;">
           <div style="margin-top: 150px">
             <div v-for="(item) in text" :key="item.message">
               <div v-if="item.highLight">

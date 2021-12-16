@@ -10,7 +10,7 @@
         </div>
       </div>
       <div class="tile is-vertical is-parent">
-        <div class="tile is-child box" style="min-height: 600px; height: 600px;">
+        <div class="tile is-child box" style="min-height: 500px; height: 500px;">
           <div style="margin-top: 150px">
             <div v-for="(item) in text" :key="item.message">
               <div v-if="item.highLight">
@@ -154,6 +154,7 @@ export default {
       this.clickAuto = false;
     },
     AddPoints() {
+      this.autoing = false;
       if (this.$refs.c.pointNum() > 200) {
         this.msg = "Max point number has been set to 200."
         return;
