@@ -26,5 +26,24 @@ export default {
         let b = p2.y - p2.x * slope;
         return [slope, b];
     },
+    getNearestPoint(clickPoint, points) {
+        let minDis = 10000000000;
+        let minPoint = null;
+        for (let i = 0; i < points.length; i++) {
+            let tempPoint = points[i];
+            let tempDis = this.getDistance(clickPoint, tempPoint);
+            if (tempDis < minDis) {
+                minDis = tempDis;
+                minPoint = tempPoint;
+            }
+        }
+        if (minDis < 20) {
+            return minPoint;
+        }
+        return null;
+    },
+    getRandomArbitrary(min, max) {
+        return Math.floor(Math.random() * (max - min)) + min;
+    },
 }
 

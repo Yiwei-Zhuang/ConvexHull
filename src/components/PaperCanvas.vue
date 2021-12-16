@@ -731,7 +731,8 @@ export default {
           }
           this.convexHullPath = this.drawPolygon(this.convexHullPath, this.convexHullList);
         }
-      } else if (this.type === 4) {
+      }
+      else if (this.type === 4) {
         let message = "";
         this.addPoints = false;
         if (this.convexHullList.length < 3) {

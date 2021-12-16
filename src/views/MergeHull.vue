@@ -5,8 +5,8 @@
     <div class="tile is-ancestor">
       <div class="tile is-parent is-8">
         <div class="tile is-child box">
-          <PaperCanvas :type="5" :canvasId="'canvas-one'" ref="pc" @message="getMessage" @lock="lock=true"
-                       @unlock="lock=false"/>
+          <MergeHullCanvas :canvasId="'canvas-one'" ref="c" @message="getMessage" @lock="lock=true"
+                           @unlock="lock=false"/>
         </div>
       </div>
       <div class="tile is-vertical is-parent">
@@ -48,14 +48,18 @@
           <section class="modal-card-body">
             <p class="content"> With the idea of pre-sort the point set, there is another algorithm called Merge Hull
               which also can determine the convex hull in <strong>O(nlogn)</strong> by divide and conquer the point set.
-            Merge Hull algorithm divides the point set into left and right part and each part will be divided again till
-            there is only few points left in the part such as 4 or 5 points. Since there is only few point, we can use
-            brutal force to compute the little convex hull in constant time. For the conquer part, the algorithm will pick left and right
-            parts that have already got convex hulls and try to connect two parts with upper and lower tangent lines.
-            One way to find such tangent lines is starting with right most point on left convex hull and left most point
-            on right convex hull and check points in CCW direction. Then, with the property of "left turn" in convex hull, we are going to make sure the
-            connection of left and right convex hull is always turning left. After we merge all partial convex hulls,
-            the final result is exactly the convex hull for the whole point set.</p>
+              Merge Hull algorithm divides the point set into left and right part and each part will be divided again
+              till
+              there is only few points left in the part such as 4 or 5 points. Since there is only few point, we can use
+              brutal force to compute the little convex hull in constant time. For the conquer part, the algorithm will
+              pick left and right
+              parts that have already got convex hulls and try to connect two parts with upper and lower tangent lines.
+              One way to find such tangent lines is starting with right most point on left convex hull and left most
+              point
+              on right convex hull and check points in CCW direction. Then, with the property of "left turn" in convex
+              hull, we are going to make sure the
+              connection of left and right convex hull is always turning left. After we merge all partial convex hulls,
+              the final result is exactly the convex hull for the whole point set.</p>
           </section>
         </div>
       </div>
@@ -65,11 +69,11 @@
 
 <script>
 import Nav from "../components/Nav";
-import PaperCanvas from "../components/PaperCanvas";
+import MergeHullCanvas from "../components/MergeHullCanvas";
 
 export default {
   name: "MergeHull",
-  components: {Nav, PaperCanvas},
+  components: {Nav, MergeHullCanvas},
   data() {
     return {
       msg: "Please add more than three points on our canvas first.",
@@ -105,19 +109,19 @@ export default {
   },
   methods: {
     async last() {
-      let index = this.$refs.pc.type5LastState();
+      let index = this.$refs.c.lastState();
       if (index !== null) {
         this.currentIndex = index;
       } else {
         this.currentIndex = 0;
-        await this.$refs.pc.show(this.currentIndex);
+        await this.$refs.c.prepare();
       }
       for (let i = 0; i < this.text.length; i++) {
         this.text[i].highLight = i === this.currentIndex;
       }
     },
     async next() {
-      if (this.$refs.pc.pointNum() <= 3) {
+      if (this.$refs.c.pointNum() <= 3) {
         return false;
       }
       if (this.currentIndex === -1) {
@@ -125,9 +129,9 @@ export default {
         for (let i = 0; i < this.text.length; i++) {
           this.text[i].highLight = i === this.currentIndex;
         }
-        await this.$refs.pc.show(0);
+        await this.$refs.c.prepare();
       } else {
-        let index = this.$refs.pc.type5NextState();
+        let index = this.$refs.c.nextState();
         if (index !== null) {
           this.currentIndex = index;
           for (let i = 0; i < this.text.length; i++) {
@@ -145,16 +149,16 @@ export default {
         this.text[i].highLight = false;
       }
       this.msg = "Please add more than three points on our canvas first.";
-      await this.$refs.pc.reset();
+      await this.$refs.c.reset();
       this.lock = false;
       this.clickAuto = false;
     },
     AddPoints() {
-      if(this.$refs.pc.pointNum() > 200) {
+      if (this.$refs.c.pointNum() > 200) {
         this.msg = "Max point number has been set to 200."
         return;
       }
-      this.$refs.pc.randomGeneratePoints(10, 0, 800, 0, 600);
+      this.$refs.c.randomGeneratePoints(10, 0, 800, 0, 600);
       this.msg = "Randomly add 10 points on canvas and all points have different x and y coordinates."
     },
     async auto() {
